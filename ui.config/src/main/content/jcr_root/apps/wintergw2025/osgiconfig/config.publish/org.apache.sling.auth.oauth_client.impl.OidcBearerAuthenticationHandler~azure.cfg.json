@@ -1,0 +1,7 @@
+{
+  "connectionName":"azure",
+  "path":[
+    "/content/wintergw2025/us/en/oauth2-authenticated"
+  ],
+  "validatorName":"offlineTokenValidator"
+}

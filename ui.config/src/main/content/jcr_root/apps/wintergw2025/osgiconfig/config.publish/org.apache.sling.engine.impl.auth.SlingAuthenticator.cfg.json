@@ -1,0 +1,6 @@
+{
+  "sling.auth.requirements":[
+    "+/libs/granite/oauth/content/authorization",
+    "+/content/wintergw2025/us/en/oauth2-authenticated"
+  ]
+}

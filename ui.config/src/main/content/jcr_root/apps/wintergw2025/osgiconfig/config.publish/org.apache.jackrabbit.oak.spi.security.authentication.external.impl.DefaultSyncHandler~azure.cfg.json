@@ -1,0 +1,19 @@
+{
+  "user.expirationTime":"1s",
+  "user.membershipExpTime":"1s",
+  "user.propertyMapping":[
+    "profile/given_name=profile/given_name",
+    "profile/family_name=profile/family_name",
+    "rep:fullname=profile/name",
+    "profile/email=profile/email",
+    "access_token=access_token",
+    "refresh_token=refresh_token"
+  ],
+  "user.pathPrefix":"azure",
+  "group.pathPrefix": "oidc",
+  "user.membershipNestingDepth": "1",
+  "user.dynamicMembership": true,
+  "group.dynamicGroups": true,
+  "user.enforceDynamicMembership": true,
+  "handler.name":"azure"
+}

@@ -1,0 +1,9 @@
+{
+  "callbackUri":"http://localhost:4503/content/wintergw2025/us/en/oauth2-authenticated/j_security_check",
+  "path":[
+    "/content/wintergw2025/us/en/oauth2-authenticated"
+  ],
+  "idp":"azure",
+  "defaultConnectionName":"azure",
+  "audience": [ "https://my-aem.com" ]
+}

@@ -1,0 +1,12 @@
+{
+  "acceptedClientIds":[
+    "44N3IaIu6zpg2G1ZHMsiRr8lCknYiJA5"
+  ],
+  "name":"offlineTokenValidator",
+  "requiredAudiences":[
+    "https://my-aem.com"
+  ],
+  "requiredScopes":[
+    "openid"
+  ]
+}
