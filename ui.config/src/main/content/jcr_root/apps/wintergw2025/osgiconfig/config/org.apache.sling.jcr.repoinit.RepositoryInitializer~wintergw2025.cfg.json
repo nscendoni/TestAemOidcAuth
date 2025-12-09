@@ -1,0 +1,7 @@
+{
+    "scripts": [
+        "create path (sling:OrderedFolder) /content/dam/wintergw2025",
+        "create path (nt:unstructured) /content/dam/wintergw2025/jcr:content",
+        "set properties on /content/dam/wintergw2025/jcr:content\n  set cq:conf{String} to /conf/wintergw2025\n  set jcr:title{String} to \"wintergw2025\"\nend"
+    ]
+}

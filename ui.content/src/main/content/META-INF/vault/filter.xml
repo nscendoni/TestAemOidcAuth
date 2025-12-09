@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workspaceFilter version="1.0">
+    <filter root="/conf/wintergw2025" mode="merge"/>
+    <filter root="/content/wintergw2025" mode="merge"/>
+    <filter root="/content/dam/wintergw2025" mode="merge">
+        <exclude pattern="/content/dam/wintergw2025(/.*)?"/>
+        <include pattern="/content/dam/wintergw2025/jcr:content(/.*)?"/>
+    </filter>
+    <filter root="/content/dam/wintergw2025/asset.jpg" mode="merge"/>
+    <filter root="/content/experience-fragments/wintergw2025" mode="merge"/>
+</workspaceFilter>
