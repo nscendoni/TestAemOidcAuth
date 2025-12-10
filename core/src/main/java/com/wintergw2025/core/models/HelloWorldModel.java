@@ -73,11 +73,11 @@ public class HelloWorldModel {
                 "PrincipalName: " + user.getPrincipal().getName() + "\n";
         Optional<Value> givenName = Arrays.stream(user.getProperty("profile/given_name")).findFirst();
         if (givenName.isPresent()) {
-            message += "profile/given_name" + Arrays.stream(user.getProperty("profile/given_name")).findFirst().get().getString() + "\n";
+            message += "profile/given_name: " + Arrays.stream(user.getProperty("profile/given_name")).findFirst().get().getString() + "\n";
         }
         Optional<Value> familyName = Arrays.stream(user.getProperty("profile/family_name")).findFirst();
         if (familyName.isPresent()) {
-            message += Arrays.stream(user.getProperty("profile/family_name")).findFirst().get().getString() + "\n";
+            message += "profile/family_name: " + Arrays.stream(user.getProperty("profile/family_name")).findFirst().get().getString() + "\n";
         }
         message = message + "\n +" + "Groups: \n";
         Iterator<Group> memberOf = user.memberOf();

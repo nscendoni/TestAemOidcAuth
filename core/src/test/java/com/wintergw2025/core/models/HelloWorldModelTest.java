@@ -15,24 +15,40 @@
  */
 package com.wintergw2025.core.models;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.security.Principal;
+import java.util.Collections;
+
+import javax.jcr.Session;
+import javax.jcr.Value;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.api.security.user.Authorizable;
+import org.apache.jackrabbit.api.security.user.Group;
+import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.day.cq.wcm.api.Page;
-import io.wcm.testing.mock.aem.junit5.AemContext;
-import io.wcm.testing.mock.aem.junit5.AemContextExtension;
 import com.wintergw2025.core.testcontext.AppAemContext;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import io.wcm.testing.mock.aem.junit5.AemContext;
+import io.wcm.testing.mock.aem.junit5.AemContextExtension;
 
 /**
- * Simple JUnit test verifying the HelloWorldModel
+ * JUnit test verifying the HelloWorldModel
  */
-@ExtendWith(AemContextExtension.class)
+@ExtendWith({AemContextExtension.class, MockitoExtension.class})
 class HelloWorldModelTest {
 
     private final AemContext context = AppAemContext.newAemContext();
@@ -42,25 +58,127 @@ class HelloWorldModelTest {
     private Page page;
     private Resource resource;
 
+    private static final String TEST_USER_ID = "testuser";
+    private static final String TEST_USER_PATH = "/home/users/test/testuser";
+    private static final String TEST_GIVEN_NAME = "John";
+    private static final String TEST_FAMILY_NAME = "Doe";
+    private static final String TEST_GROUP_PATH = "/home/groups/test/testgroup";
+
     @BeforeEach
     public void setup() throws Exception {
+        // Create mocks for JCR security
+        Session mockSession = mock(Session.class);
+        UserManager mockUserManager = mock(UserManager.class);
+        Authorizable mockUser = mock(Authorizable.class);
+        Principal mockPrincipal = mock(Principal.class);
+        Group mockGroup = mock(Group.class);
 
-        // prepare a page with a test resource
+        // Setup session mock
+        when(mockSession.getUserID()).thenReturn(TEST_USER_ID);
+
+        // Setup user mock
+        when(mockUser.getPath()).thenReturn(TEST_USER_PATH);
+        when(mockUser.getPrincipal()).thenReturn(mockPrincipal);
+        when(mockPrincipal.getName()).thenReturn(TEST_USER_ID);
+
+        // Setup user properties (given_name and family_name)
+        Value mockGivenNameValue = mock(Value.class);
+        when(mockGivenNameValue.getString()).thenReturn(TEST_GIVEN_NAME);
+        when(mockUser.getProperty("profile/given_name")).thenReturn(new Value[]{mockGivenNameValue});
+
+        Value mockFamilyNameValue = mock(Value.class);
+        when(mockFamilyNameValue.getString()).thenReturn(TEST_FAMILY_NAME);
+        when(mockUser.getProperty("profile/family_name")).thenReturn(new Value[]{mockFamilyNameValue});
+
+        // Setup group mock
+        when(mockGroup.getPath()).thenReturn(TEST_GROUP_PATH);
+        when(mockUser.memberOf()).thenReturn(Collections.singletonList(mockGroup).iterator());
+
+        // Setup UserManager mock
+        when(mockUserManager.getAuthorizable(TEST_USER_ID)).thenReturn(mockUser);
+
+        // Register adapters for Session and UserManager
+        context.registerAdapter(ResourceResolver.class, Session.class, mockSession);
+        context.registerAdapter(ResourceResolver.class, UserManager.class, mockUserManager);
+
+        // Prepare a page with a test resource
         page = context.create().page("/content/mypage");
         resource = context.create().resource(page, "hello",
             "sling:resourceType", "wintergw2025/components/helloworld");
 
-        // create sling model
+        // Create sling model
         hello = resource.adaptTo(HelloWorldModel.class);
     }
 
-    //@Test
+    @Test
     void testGetMessage() throws Exception {
-        // some very basic junit tests
+        // Verify model was created
+        assertNotNull(hello, "HelloWorldModel should not be null");
+
+        // Get the message
         String msg = hello.getMessage();
-        assertNotNull(msg);
-        assertTrue(StringUtils.contains(msg, resource.getResourceType()));
-        assertTrue(StringUtils.contains(msg, page.getPath()));
+
+        // Verify message is not null
+        assertNotNull(msg, "Message should not be null");
+
+        // Verify message contains expected content
+        assertTrue(StringUtils.contains(msg, "Hello World!"), "Message should contain 'Hello World!'");
+        assertTrue(StringUtils.contains(msg, resource.getResourceType()), "Message should contain resource type");
+        assertTrue(StringUtils.contains(msg, page.getPath()), "Message should contain page path");
     }
 
+    @Test
+    void testMessageContainsUserPath() throws Exception {
+        assertNotNull(hello, "HelloWorldModel should not be null");
+        String msg = hello.getMessage();
+
+        assertTrue(StringUtils.contains(msg, TEST_USER_PATH), 
+            "Message should contain user path: " + TEST_USER_PATH);
+    }
+
+    @Test
+    void testMessageContainsPrincipalName() throws Exception {
+        assertNotNull(hello, "HelloWorldModel should not be null");
+        String msg = hello.getMessage();
+
+        assertTrue(StringUtils.contains(msg, "PrincipalName: " + TEST_USER_ID), 
+            "Message should contain principal name");
+    }
+
+    @Test
+    void testMessageContainsGivenName() throws Exception {
+        assertNotNull(hello, "HelloWorldModel should not be null");
+        String msg = hello.getMessage();
+
+        assertTrue(StringUtils.contains(msg, TEST_GIVEN_NAME), 
+            "Message should contain given name: " + TEST_GIVEN_NAME);
+    }
+
+    @Test
+    void testMessageContainsFamilyName() throws Exception {
+        assertNotNull(hello, "HelloWorldModel should not be null");
+        String msg = hello.getMessage();
+
+        assertTrue(StringUtils.contains(msg, TEST_FAMILY_NAME), 
+            "Message should contain family name: " + TEST_FAMILY_NAME);
+    }
+
+    @Test
+    void testMessageContainsGroups() throws Exception {
+        assertNotNull(hello, "HelloWorldModel should not be null");
+        String msg = hello.getMessage();
+
+        assertTrue(StringUtils.contains(msg, "Groups:"), "Message should contain 'Groups:' section");
+        assertTrue(StringUtils.contains(msg, TEST_GROUP_PATH), 
+            "Message should contain group path: " + TEST_GROUP_PATH);
+    }
+
+    @Test
+    void testMessageContainsResourceType() throws Exception {
+        assertNotNull(hello, "HelloWorldModel should not be null");
+        String msg = hello.getMessage();
+
+        assertTrue(StringUtils.contains(msg, "wintergw2025/components/helloworld"), 
+            "Message should contain the resource type");
+    }
 }
