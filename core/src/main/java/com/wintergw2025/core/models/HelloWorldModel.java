@@ -59,7 +59,7 @@ public class HelloWorldModel {
         String currentPagePath = Optional.ofNullable(pageManager)
                 .map(pm -> pm.getContainingPage(currentResource))
                 .map(Page::getPath).orElse("");
-
+        
         message = "Hello World!\n"
                 + "Resource type is: " + resourceType + "\n"
                 + "Current page is:  " + currentPagePath + "\n\n";
@@ -69,11 +69,23 @@ public class HelloWorldModel {
             UserManager um = resourceResolver.adaptTo(UserManager.class);
             
             if (session == null || um == null) {
-                message += "User information not available (anonymous access)";
+                message += "⚠️ You are browsing as ANONYMOUS\n\n"
+                        + "User information is not available.\n"
+                        + "Please log in to see your profile details.";
                 return;
             }
             
             String userId = session.getUserID();
+            
+            // Check if user is anonymous
+            if ("anonymous".equals(userId)) {
+                message += "⚠️ You are browsing as ANONYMOUS\n\n"
+                        + "User ID: " + userId + "\n\n"
+                        + "You are not logged in.\n"
+                        + "Please authenticate to see your profile details.";
+                return;
+            }
+            
             Authorizable user = um.getAuthorizable(userId);
             
             if (user == null) {
@@ -81,24 +93,28 @@ public class HelloWorldModel {
                 return;
             }
             
-            message += "Logged User:\n" +
-                    "Path: " + user.getPath() + "\n" +
-                    "PrincipalName: " + user.getPrincipal().getName() + "\n";
+            message += "✅ Logged User:\n" +
+                    "User ID: " + userId + "\n" +
+                "Path: " + user.getPath() + "\n" +
+                "PrincipalName: " + user.getPrincipal().getName() + "\n";
             
             Value[] givenNameValues = user.getProperty("profile/given_name");
             if (givenNameValues != null && givenNameValues.length > 0) {
-                message += "profile/given_name: " + givenNameValues[0].getString() + "\n";
+                message += "Given Name: " + givenNameValues[0].getString() + "\n";
             }
             
             Value[] familyNameValues = user.getProperty("profile/family_name");
             if (familyNameValues != null && familyNameValues.length > 0) {
-                message += "profile/family_name: " + familyNameValues[0].getString() + "\n";
+                message += "Family Name: " + familyNameValues[0].getString() + "\n";
             }
             
             message += "\nGroups:\n";
             Iterator<Group> memberOf = user.memberOf();
             while (memberOf.hasNext()) {
-                message += "- " + memberOf.next().getPath() + "\n";
+                Group group = memberOf.next();
+                String groupName = group.getPrincipal().getName();
+                String groupPath = group.getPath();
+                message += "- " + groupName + " (" + groupPath + ")\n";
             }
         } catch (RepositoryException e) {
             message += "Error retrieving user information: " + e.getMessage();

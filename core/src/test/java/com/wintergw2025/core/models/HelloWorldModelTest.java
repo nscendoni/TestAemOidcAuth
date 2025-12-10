@@ -62,6 +62,7 @@ class HelloWorldModelTest {
     private static final String TEST_USER_PATH = "/home/users/test/testuser";
     private static final String TEST_GIVEN_NAME = "John";
     private static final String TEST_FAMILY_NAME = "Doe";
+    private static final String TEST_GROUP_NAME = "testgroup";
     private static final String TEST_GROUP_PATH = "/home/groups/test/testgroup";
 
     @BeforeEach
@@ -91,6 +92,9 @@ class HelloWorldModelTest {
         when(mockUser.getProperty("profile/family_name")).thenReturn(new Value[]{mockFamilyNameValue});
 
         // Setup group mock
+        Principal mockGroupPrincipal = mock(Principal.class);
+        when(mockGroupPrincipal.getName()).thenReturn(TEST_GROUP_NAME);
+        when(mockGroup.getPrincipal()).thenReturn(mockGroupPrincipal);
         when(mockGroup.getPath()).thenReturn(TEST_GROUP_PATH);
         when(mockUser.memberOf()).thenReturn(Collections.singletonList(mockGroup).iterator());
 
@@ -169,6 +173,8 @@ class HelloWorldModelTest {
         String msg = hello.getMessage();
 
         assertTrue(StringUtils.contains(msg, "Groups:"), "Message should contain 'Groups:' section");
+        assertTrue(StringUtils.contains(msg, TEST_GROUP_NAME), 
+            "Message should contain group name: " + TEST_GROUP_NAME);
         assertTrue(StringUtils.contains(msg, TEST_GROUP_PATH), 
             "Message should contain group path: " + TEST_GROUP_PATH);
     }
