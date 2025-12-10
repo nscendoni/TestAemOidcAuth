@@ -122,3 +122,15 @@ A ClientLib will consist of the following files and directories:
 The project comes with the auto-public repository configured. To setup the repository in your Maven settings, refer to:
 
     http://helpx.adobe.com/experience-manager/kb/SetUpTheAdobeMavenRepository.html
+
+# How to test with dispatcher
+
+We assume that you run AEM on port 4053.
+Download the sdk in the projec root directory from [Software Distribution](https://experience.adobe.com/downloads) and unpack it and the run:
+```
+./aem-sdk-dispatcher-tools-2.0.258-unix.sh
+cd dispatcher-sdk-2.0.258
+./bin/docker_run.sh ../dispatcher/src docker.for.mac.localhost:4503 8080
+```
+
+Remark: to deploy dispatcher confiuration you need to create a Web Tier Config pipeline. You also need to configure the Code Location to: `dispatcher/src`. Documentation on how to debug is [here](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/validation-debug)
