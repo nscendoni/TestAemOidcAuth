@@ -17,3 +17,6 @@ $include "./default_filters.any"
 /0104 { /type "allow" /method "POST" /url "/content/*/j_security_check" }
 /0105 { /type "allow" /method "GET" /url "*/oauth2-authenticated/j_security_check" }
 /0106 { /type "allow" /method "POST" /url "*/oauth2-authenticated/j_security_check" }
+
+# Allow Logout
+/0107 { /type "allow" /method "GET" /url "/system/sling/logout" }
