@@ -36,7 +36,6 @@ import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
 import com.day.cq.wcm.api.Page;
 import com.day.cq.wcm.api.PageManager;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -55,34 +54,54 @@ public class HelloWorldModel {
     private String message;
 
     @PostConstruct
-    protected void init() throws RepositoryException {
+    protected void init() {
         PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
         String currentPagePath = Optional.ofNullable(pageManager)
                 .map(pm -> pm.getContainingPage(currentResource))
                 .map(Page::getPath).orElse("");
 
-        Session session = resourceResolver.adaptTo(Session.class);
-        UserManager um = resourceResolver.adaptTo(UserManager.class);
-        Authorizable user = um.getAuthorizable(session.getUserID());
-        
         message = "Hello World!\n"
                 + "Resource type is: " + resourceType + "\n"
-                + "Current page is:  " + currentPagePath + "\n\n"
-                + "Logged User:\n" +
-                "Path: " + user.getPath() + "\n" +
-                "PrincipalName: " + user.getPrincipal().getName() + "\n";
-        Optional<Value> givenName = Arrays.stream(user.getProperty("profile/given_name")).findFirst();
-        if (givenName.isPresent()) {
-            message += "profile/given_name: " + Arrays.stream(user.getProperty("profile/given_name")).findFirst().get().getString() + "\n";
-        }
-        Optional<Value> familyName = Arrays.stream(user.getProperty("profile/family_name")).findFirst();
-        if (familyName.isPresent()) {
-            message += "profile/family_name: " + Arrays.stream(user.getProperty("profile/family_name")).findFirst().get().getString() + "\n";
-        }
-        message = message + "\n +" + "Groups: \n";
-        Iterator<Group> memberOf = user.memberOf();
-        while (memberOf.hasNext()) {
-            message = message + "-" + memberOf.next().getPath() + "\n";
+                + "Current page is:  " + currentPagePath + "\n\n";
+
+        try {
+            Session session = resourceResolver.adaptTo(Session.class);
+            UserManager um = resourceResolver.adaptTo(UserManager.class);
+            
+            if (session == null || um == null) {
+                message += "User information not available (anonymous access)";
+                return;
+            }
+            
+            String userId = session.getUserID();
+            Authorizable user = um.getAuthorizable(userId);
+            
+            if (user == null) {
+                message += "Logged User: " + userId + " (user details not available)";
+                return;
+            }
+            
+            message += "Logged User:\n" +
+                    "Path: " + user.getPath() + "\n" +
+                    "PrincipalName: " + user.getPrincipal().getName() + "\n";
+            
+            Value[] givenNameValues = user.getProperty("profile/given_name");
+            if (givenNameValues != null && givenNameValues.length > 0) {
+                message += "profile/given_name: " + givenNameValues[0].getString() + "\n";
+            }
+            
+            Value[] familyNameValues = user.getProperty("profile/family_name");
+            if (familyNameValues != null && familyNameValues.length > 0) {
+                message += "profile/family_name: " + familyNameValues[0].getString() + "\n";
+            }
+            
+            message += "\nGroups:\n";
+            Iterator<Group> memberOf = user.memberOf();
+            while (memberOf.hasNext()) {
+                message += "- " + memberOf.next().getPath() + "\n";
+            }
+        } catch (RepositoryException e) {
+            message += "Error retrieving user information: " + e.getMessage();
         }
     }
 
