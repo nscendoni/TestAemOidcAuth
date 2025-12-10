@@ -20,6 +20,7 @@ import static org.apache.sling.api.resource.ResourceResolver.PROPERTY_RESOURCE_T
 import javax.annotation.PostConstruct;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
+import javax.jcr.Value;
 
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
@@ -35,6 +36,7 @@ import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
 import com.day.cq.wcm.api.Page;
 import com.day.cq.wcm.api.PageManager;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -65,19 +67,23 @@ public class HelloWorldModel {
         
         message = "Hello World!\n"
                 + "Resource type is: " + resourceType + "\n"
-                + "Current page is:  " + currentPagePath + "\n"
+                + "Current page is:  " + currentPagePath + "\n\n"
                 + "Logged User:\n" +
                 "Path: " + user.getPath() + "\n" +
-                "PrincipalName: " + user.getPrincipal().getName() + "\n" +
-                "givenName:" + user.getProperty("profile/given_name") + "\n" +
-                "surname:" + user.getProperty("profile/family_name") + "\n" +
-                "Groups: \n";
-        message += "<ul>\n";
+                "PrincipalName: " + user.getPrincipal().getName() + "\n";
+        Optional<Value> givenName = Arrays.stream(user.getProperty("profile/given_name")).findFirst();
+        if (givenName.isPresent()) {
+            message += "profile/given_name" + Arrays.stream(user.getProperty("profile/given_name")).findFirst().get().getString() + "\n";
+        }
+        Optional<Value> familyName = Arrays.stream(user.getProperty("profile/family_name")).findFirst();
+        if (familyName.isPresent()) {
+            message += Arrays.stream(user.getProperty("profile/family_name")).findFirst().get().getString() + "\n";
+        }
+        message = message + "\n +" + "Groups: \n";
         Iterator<Group> memberOf = user.memberOf();
         while (memberOf.hasNext()) {
-            message = message + "<li>" + memberOf.next().getPath() + "\n";
+            message = message + "-" + memberOf.next().getPath() + "\n";
         }
-        message += "</ul>\n";
     }
 
     public String getMessage() {
