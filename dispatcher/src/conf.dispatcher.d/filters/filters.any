@@ -11,3 +11,6 @@ $include "./default_filters.any"
 
 # Allow manifest.webmanifest files located in the content
 /0102 { /type "allow" /extension "webmanifest" /path "/content/*/manifest" }
+
+# Allow OIDC
+/0103 { /type "allow" /method "GET" /url "/oauth2-authenticated/j_security_check" }
