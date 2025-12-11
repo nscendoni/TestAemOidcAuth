@@ -3,5 +3,6 @@
   "path":[
     "/content/wintergw2025/us/en/oauth2-authenticated"
   ],
+  "idp":"azure",
   "validatorName":"offlineTokenValidator"
 }
