@@ -5,3 +5,19 @@
 #
 
 $include "./default_rules.any"
+
+# Don't cache OIDC authenticated pages (user-specific content)
+/0100 {
+    /glob "/content/*/oauth2-authenticated*"
+    /type "deny"
+}
+/0101 {
+    /glob "*/oauth2-authenticated*"
+    /type "deny"
+}
+
+# Don't cache /bin servlets
+/0102 {
+    /glob "/bin/*"
+    /type "deny"
+}
