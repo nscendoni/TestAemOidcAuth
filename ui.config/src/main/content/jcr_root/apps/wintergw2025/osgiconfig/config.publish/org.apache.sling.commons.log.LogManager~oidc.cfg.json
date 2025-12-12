@@ -1,0 +1,7 @@
+{
+  "org.apache.sling.commons.log.additiv":false,
+  "org.apache.sling.commons.log.level":"debug",
+  "org.apache.sling.commons.log.names":[
+    "org.apache.sling.auth.oauth_client"
+  ]
+}
