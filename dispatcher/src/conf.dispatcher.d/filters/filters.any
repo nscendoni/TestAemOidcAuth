@@ -20,3 +20,6 @@ $include "./default_filters.any"
 
 # Allow Logout
 /0107 { /type "allow" /method "GET" /url "/system/sling/logout" }
+
+# Allow Secret Data Servlet
+/0108 { /type "allow" /method "GET" /url "/bin/wintergw2025/secret-data" }

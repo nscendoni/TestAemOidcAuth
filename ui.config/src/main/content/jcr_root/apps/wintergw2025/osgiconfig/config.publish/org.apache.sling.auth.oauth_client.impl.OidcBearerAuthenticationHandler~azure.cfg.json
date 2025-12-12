@@ -1,8 +1,9 @@
 {
   "connectionName":"azure",
   "path":[
-    "/content/wintergw2025/us/en/oauth2-authenticated"
+    "/bin/wintergw2025/secret-data"
   ],
   "idp":"azure",
-  "validatorName":"offlineTokenValidator"
+  "validatorName":"offlineTokenValidator",
+  "service.ranking:Integer": -5
 }

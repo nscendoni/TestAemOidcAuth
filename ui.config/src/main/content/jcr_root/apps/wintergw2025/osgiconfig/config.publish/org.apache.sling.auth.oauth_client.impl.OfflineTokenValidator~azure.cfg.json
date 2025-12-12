@@ -1,6 +1,7 @@
 {
   "acceptedClientIds":[
-    "44N3IaIu6zpg2G1ZHMsiRr8lCknYiJA5"
+    "44N3IaIu6zpg2G1ZHMsiRr8lCknYiJA5",
+    "6luQsbKCXEFQYwVQ196z8fPSL0truG0f"
   ],
   "name":"offlineTokenValidator",
   "requiredAudiences":[
