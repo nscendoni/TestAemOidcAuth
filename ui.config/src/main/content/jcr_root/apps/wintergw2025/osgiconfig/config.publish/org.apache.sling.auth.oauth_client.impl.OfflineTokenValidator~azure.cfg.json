@@ -6,7 +6,8 @@
   ],
   "name":"offlineTokenValidator",
   "requiredAudiences":[
-    "https://my-aem.com"
+    "https://my-aem.com",
+    "https://publish-p148861-e340062-cmstg.adobeaemcloud.com/bin/wintergw2025/secret-data"
   ],
   "requiredScopes":[
     "openid"
