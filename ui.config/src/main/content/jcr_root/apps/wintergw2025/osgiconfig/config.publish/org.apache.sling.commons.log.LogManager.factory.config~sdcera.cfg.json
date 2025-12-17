@@ -1,0 +1,12 @@
+{
+  "org.apache.sling.commons.log.names": [
+    "org.apache.sling.auth.oauth_client.impl.OidcAuthenticationHandler",
+    "org.apache.sling.auth.oauth_client.impl.SlingUserInfoProcessorImpl",
+    "org.apache.jackrabbit.oak.spi.security.authentication.external.impl.ExternalLoginModule",
+    "org.apache.sling.auth.oauth_client.impl.OidcAuthenticationHandler",
+    "org.apache.jackrabbit.oak.spi.security.authentication.external.impl.DefaultSyncHandler"
+  ],
+  "org.apache.sling.commons.log.level": "DEBUG",
+  "org.apache.sling.commons.log.file": "logs/sdcera1.log",
+  "org.apache.sling.commons.log.additiv": "false"
+}

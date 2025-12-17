@@ -1,0 +1,7 @@
+{
+    "connection": "idme",
+    "userInfoEndpoint": "https://api.idmelabs.com/api/public/v3/userinfo",
+    "storeAccessToken": false,
+    "idpNameInPrincipals": false
+}
+

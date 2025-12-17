@@ -1,0 +1,12 @@
+{
+  "sling.auth.requirements": [
+    "+/content/sdcera",
+    "-/libs/granite/core/content/login",
+    "-/libs/granite/core/content/login/*",
+    "-/system/console",
+    "-/system/console/*",
+    "-/system/sling/info",
+    "-/etc/clientlibs"
+  ],
+  "auth.sudo.cookie": true
+}

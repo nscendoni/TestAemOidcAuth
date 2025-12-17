@@ -1,0 +1,29 @@
+{
+  "user.expirationTime": "1s",
+  "user.membershipExpTime": "1s",
+  "group.expirationTime": "1s",
+  "user.propertyMapping": [
+    "profile/given_name=profile/given_name",
+    "profile/family_name=profile/family_name",
+    "profile/name=profile/name",
+    "profile/email=profile/email",
+    "profile/phone=profile/phone",
+    "profile/zip=profile/zip",
+    "profile/birth_date=profile/birth_date",
+    "profile/uuid=profile/uuid",
+    "profile/social=profile/social",
+    "profile/credential_option_preverified=profile/credential_option_preverified",
+    "profile/sub=profile/sub",
+    "profile/iss=profile/iss",
+    "profile/aud=profile/aud",
+    "oauth_access_token=oauth_access_token"
+  ],
+  "user.pathPrefix": "idme",
+  "group.pathPrefix": "idme",
+  "user.membershipNestingDepth": "1",
+  "user.dynamicMembership": "true",
+  "user.enforceDynamicMembership": "true",
+  "group.dynamicGroups": "true",
+  "user.autoMembership": [],
+  "handler.name": "idme"
+}

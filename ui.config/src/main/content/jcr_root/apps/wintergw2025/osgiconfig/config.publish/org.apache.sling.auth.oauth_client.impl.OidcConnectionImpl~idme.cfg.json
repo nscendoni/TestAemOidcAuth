@@ -1,0 +1,10 @@
+{
+  "name": "idme",
+  "baseUrl": "https://api.idmelabs.com/oidc",
+  "clientId": "9c174b9fb56c8f425ba383bb96ff292d",
+  "clientSecret": "$[env:CLIENT_SECRET]",
+  "scopes": [
+    "openid",
+    "http://idmanagement.gov/ns/assurance/ial/2/aal/2"
+  ]
+}

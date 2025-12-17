@@ -1,0 +1,10 @@
+{
+  "callbackUri": "https://localhost:8443/content/sdcera/j_security_check",
+  "path":[
+    "/content/sdcera"
+  ],
+  "idp": "idme-idp",
+  "defaultConnectionName": "idme",
+  "pkceEnabled": false,
+  "userInfoEnabled": false
+}
