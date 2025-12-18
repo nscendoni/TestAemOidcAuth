@@ -23,3 +23,6 @@ $include "./default_filters.any"
 
 # Allow Secret Data Servlet
 /0108 { /type "allow" /method "GET" /url "/bin/wintergw2025/secret-data" }
+
+# Allow SAML HTTP POST to ../saml_login end points
+/0190 { /type "allow" /method "POST" /url "*/saml_login" }

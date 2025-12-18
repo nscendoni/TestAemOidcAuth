@@ -9,11 +9,11 @@
     "access_token=access_token",
     "refresh_token=refresh_token"
   ],
-  "user.pathPrefix":"azure",
+  "user.pathPrefix":"my-idp",
   "group.pathPrefix": "oidc",
   "user.membershipNestingDepth": "1",
   "user.dynamicMembership": true,
   "group.dynamicGroups": true,
   "user.enforceDynamicMembership": true,
-  "handler.name":"azure"
+  "handler.name":"my-sync-handler"
 }

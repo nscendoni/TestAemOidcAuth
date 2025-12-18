@@ -1,0 +1,11 @@
+{
+  "name":"oidc-connection",
+  "scopes":[
+    "openid",
+    "profile",
+    "email"
+  ],
+  "baseUrl":"$[env:OIDC_BASE_URL;default=http://host.docker.internal:8081/realms/sling]",
+  "clientId":"$[env:OIDC_CLIENT_ID;default=oidc-test]",
+  "clientSecret":"$[env:OIDC_CLIENT_SECRET;default=wM2XIbxBTLJAac2rJSuHyKaoP8IWvSwJ]"
+}

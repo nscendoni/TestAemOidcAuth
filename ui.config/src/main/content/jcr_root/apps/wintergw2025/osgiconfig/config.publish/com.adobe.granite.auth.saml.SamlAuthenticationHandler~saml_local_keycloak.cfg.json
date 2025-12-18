@@ -1,0 +1,26 @@
+{
+  "path":[
+    "/content/wintergw2025/us/en/saml-authenticated"
+  ],
+  "idpCertAlias":"$[env:SAML_ALIAS;default=certalias___1766063058655]",
+  "idpUrl":"$[env:SAML_IDP_URL;default=http://localhost:8081/realms/sling/protocol/saml]",
+  "serviceProviderEntityId":"test-saml",
+  "spPrivateKeyAlias":"aem-sp",
+  "keyStorePassword":"admin",
+  "useEncryption":false,
+  "storeSAMLResponse":true,
+  "logoutUrl":"$[env:SAML_LOGOUT_URL;default=http://localhost:8081/realms/sling/protocol/saml]",
+  "handleLogout":true,
+  "userIDAttribute": "uid",
+  "userIntermediatePath": "/saml",
+  "synchronizeAttributes": [
+    "urn:oid:2.5.4.42=givenName",
+    "urn:oid:2.5.4.4=surname"
+  ],
+  "defaultGroups":[
+  ],
+  "nameIdFormat":"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+  "groupMembershipAttribute": "Role",
+  "identitySyncType": "idp_dynamic",
+  "idpIdentifier": "saml-idp"
+}

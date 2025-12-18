@@ -1,0 +1,4 @@
+{
+  "sync.handlerName":"my-sync-handler",
+  "idp.name":"oidc-idp"
+}

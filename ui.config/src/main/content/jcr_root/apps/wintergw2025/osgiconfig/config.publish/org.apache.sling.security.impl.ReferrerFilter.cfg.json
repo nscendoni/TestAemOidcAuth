@@ -1,0 +1,11 @@
+{
+  "allow.empty": true,
+  "allow.hosts.regexp": [ ],
+  "allow.hosts": [
+    "$[env:SAML_IDP_REFERRER;default=localhost:8081]"
+  ],
+  "filter.methods": [
+    "POST"
+  ],
+  "exclude.agents.regexp": [ ]
+}

@@ -1,0 +1,33 @@
+FROM eclipse-temurin:21-jdk
+
+ENV AEM_DIR=/opt/aem
+ENV MAVEN_REPOSITORY=/var/cache/maven
+ENV CONTENT_PATH=/var/cache/contents
+
+# Install required tools
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        maven \
+        procps \
+        jq \
+        libxml2-utils \
+        openssl \
+        vim \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories
+RUN mkdir -p ${AEM_DIR} && \
+    mkdir -p ${MAVEN_REPOSITORY} && \
+    mkdir -p ${CONTENT_PATH}
+
+WORKDIR ${AEM_DIR}
+
+VOLUME ${MAVEN_REPOSITORY}
+VOLUME ${CONTENT_PATH}
+
+EXPOSE 4503 5006
+
+# Scripts are mounted as volumes, not copied
+ENTRYPOINT ["/opt/aem/docker-entrypoint.sh"]

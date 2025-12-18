@@ -67,6 +67,13 @@
                                 linkTarget="_self"
                                 text="OAuth2 Authenticated"/>
                         </actions>
+                        <actions jcr:primaryType="nt:unstructured">
+                            <item0
+                                    jcr:primaryType="nt:unstructured"
+                                    link="/content/wintergw2025/us/en/saml-authenticated"
+                                    linkTarget="_self"
+                                    text="Saml Authenticated"/>
+                        </actions>
                     </teaser_copy_1579324932>
                     <helloworld
                         jcr:created="{Date}2025-12-10T15:14:09.631Z"

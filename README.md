@@ -1,4 +1,108 @@
-# Sample AEM project template
+# AEM OIDC & SAML Authentication Demo
+
+This is a demo AEM project showcasing how to set up **OIDC (OpenID Connect)** and **SAML** authentication with **Keycloak** as the Identity Provider (IdP). It provides a complete Docker-based development environment with AEM, Keycloak, and Dispatcher pre-configured for authentication testing.
+
+## Quick Start with Docker Compose
+
+The easiest way to run this demo is using Docker Compose, which orchestrates AEM, Keycloak, and Dispatcher containers with automatic SAML certificate exchange.
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- AEM Quickstart JAR file (6.6.0-SNAPSHOT or compatible)
+- ~8GB RAM available for containers
+
+### Setup
+
+1. **Create a `.env` file** in the project root with the path to your AEM quickstart JAR:
+
+   ```bash
+   AEM_QUICKSTART=/path/to/your/cq-quickstart-6.6.0-SNAPSHOT.jar
+   ```
+
+2. **Start all services:**
+
+   ```bash
+   docker-compose up
+   ```
+
+   This will:
+   - Start Keycloak with the pre-configured `sling` realm
+   - Wait for Keycloak to be healthy
+   - Start AEM Publish instance
+   - Automatically generate and exchange SAML certificates between AEM and Keycloak
+   - Deploy the project packages to AEM
+   - Start the Dispatcher
+
+3. **Access the services:**
+
+   | Service    | URL                        |
+   |------------|----------------------------|
+   | AEM Publish | http://localhost:4503     |
+   | Keycloak   | http://localhost:8081      |
+   | Dispatcher | http://localhost:8085      |
+
+### Test User
+
+To test authentication, use the following credentials:
+
+| Username | Password |
+|----------|----------|
+| `test`   | `test`   |
+
+### How It Works
+
+#### SAML Authentication Flow
+
+1. User accesses a protected page on AEM
+2. AEM redirects to Keycloak's SAML endpoint
+3. User authenticates with Keycloak (e.g., `test`/`test`)
+4. Keycloak sends a SAML assertion back to AEM
+5. AEM validates the assertion and creates a user session
+
+#### Automatic Certificate Exchange
+
+The `saml_setup.sh` script runs automatically at container startup and:
+
+1. **Generates AEM certificates** - Creates RSA key pair and self-signed certificate for the AEM Service Provider (SP)
+2. **Retrieves Keycloak certificate** - Downloads the IdP signing certificate from Keycloak's SAML descriptor
+3. **Uploads AEM certificate to Keycloak** - Configures the `test-saml` client in Keycloak with AEM's public certificate
+4. **Configures AEM truststore** - Imports Keycloak's certificate so AEM can validate SAML assertions
+5. **Configures AEM keystore** - Sets up the `authentication-service` user's keystore with AEM's private key
+
+#### OIDC Authentication
+
+The project also includes OIDC configuration for OAuth2-based authentication. This can be used as an alternative or in addition to SAML.
+
+### Environment Variables
+
+The following environment variables can be customized in your `.env` file:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AEM_QUICKSTART` | (required) | Path to AEM quickstart JAR |
+| `KEYCLOAK_ADMIN` | `admin` | Keycloak admin username |
+| `KEYCLOAK_ADMIN_PASSWORD` | `admin` | Keycloak admin password |
+| `KEYCLOAK_REALM` | `sling` | Keycloak realm name |
+| `KEYCLOAK_SAML_CLIENT_ID` | `test-saml` | SAML client ID in Keycloak |
+| `OPENSSL_PASS` | `admin` | Password for generated certificates |
+
+### Stopping the Environment
+
+```bash
+docker-compose down
+```
+
+To completely reset (including Keycloak database):
+
+```bash
+docker-compose down
+rm -rf keycloak/h2 keycloak/transaction-logs
+```
+
+---
+
+## Project Modules
 
 This is a project template for AEM-based applications. It is intended as a best-practice set of examples as well as a potential starting point to develop your own functionality.
 
@@ -126,11 +230,69 @@ The project comes with the auto-public repository configured. To setup the repos
 # How to test with dispatcher
 
 We assume that you run AEM on port 4053.
-Download the sdk in the projec root directory from [Software Distribution](https://experience.adobe.com/downloads) and unpack it and the run:
-```
-./aem-sdk-dispatcher-tools-2.0.258-unix.sh
+Download the sdk in the project root directory from [Software Distribution](https://experience.adobe.com/downloads) and unpack it and the run:
+```bash
 cd dispatcher-sdk-2.0.258
-./bin/docker_run.sh ../dispatcher/src docker.for.mac.localhost:4503 8080
+rm -rf cache/html/content
+./bin/docker_run.sh ../dispatcher/src docker.for.mac.localhost:4503 8085
+```
+You can find all the options, including enabling trace logs by running: `./bin/docker_run.sh --help`
+
+Remark: to deploy dispatcher configuration you need to create a Web Tier Config pipeline. You also need to configure the Code Location to: `dispatcher/src`. Documentation on how to debug is [here](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/validation-debug)
+
+## How to run dispatcher validation
+```bash
+cd dispatcher-sdk-2.0.258
+./bin/validate.sh src/dispatcher
 ```
 
-Remark: to deploy dispatcher confiuration you need to create a Web Tier Config pipeline. You also need to configure the Code Location to: `dispatcher/src`. Documentation on how to debug is [here](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/validation-debug)
+# How to run Keycloak (Standalone)
+
+> **Note:** For the full demo experience with automatic SAML setup, use `docker-compose up` instead (see Quick Start above).
+
+To run Keycloak standalone:
+
+```bash
+docker run --rm \
+  --volume $(pwd)/keycloak:/opt/keycloak/data \
+  -p 8081:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  --name keycloak \
+  quay.io/keycloak/keycloak:26.4.6 start-dev --import-realm
+```
+
+## How to export Keycloak configuration
+
+To export the realm configuration, run inside the Keycloak container:
+
+```bash
+# Using kcadm.sh (while Keycloak is running)
+docker exec -it keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8080 --realm master --user admin
+docker exec -it keycloak /opt/keycloak/bin/kcadm.sh get realms/sling \
+  > keycloak/export/sling-export.json
+
+# Or using kc.sh export (requires restart)
+docker run --rm \
+  --volume $(pwd)/keycloak:/opt/keycloak/data \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:26.4.6 export --dir /opt/keycloak/data/export
+```
+
+# Environment variables that can be customized for different idp
+OIDC_BASE_URL
+OIDC_CLIENT_ID
+OIDC_CLIENT_SECRET
+
+SAML_IDP_REFERRER
+SAML_IDP_URL
+SAML_ALIAS
+SAML_LOGOUT_URL
+
+# How to deploy to cloud
+Set in Cloud Manager the variable OIDC_CALLBACK. For example:
+```
+OIDC_CALLBACK=https://publish-p148861-e340062-cmstg.adobeaemcloud.com
+```

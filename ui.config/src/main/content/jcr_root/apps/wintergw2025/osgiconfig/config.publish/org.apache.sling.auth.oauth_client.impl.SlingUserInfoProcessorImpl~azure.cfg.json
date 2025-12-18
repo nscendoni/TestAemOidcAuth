@@ -1,6 +1,0 @@
-{
-  "groupsInIdToken": "true",
-  "storeAccessToken": "false",
-  "storeRefreshToken": "false",
-  "connection": "azure"
-}

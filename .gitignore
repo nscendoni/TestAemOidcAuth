@@ -105,3 +105,6 @@ reports/
 # Others
 dispatcher/src/conf.d/variables/default.vars
 dispatcher-sdk-*
+keycloak/h2
+.env
+

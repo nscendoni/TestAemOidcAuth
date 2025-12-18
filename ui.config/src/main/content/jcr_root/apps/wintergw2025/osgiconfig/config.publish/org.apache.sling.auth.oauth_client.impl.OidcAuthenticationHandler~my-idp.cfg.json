@@ -1,0 +1,9 @@
+{
+  "callbackUri":"$[env:OIDC_CALLBACK;default=http://localhost:8085/content/wintergw2025/us/en/oauth2-authenticated/j_security_check]",
+  "path":[
+    "/content/wintergw2025/us/en/oauth2-authenticated"
+  ],
+  "idp":"oidc-idp",
+  "defaultConnectionName":"oidc-connection",
+  "audience": [ "https://my-aem.com" ]
+}

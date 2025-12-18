@@ -1,9 +1,9 @@
 {
-  "connectionName":"azure",
+  "connectionName":"oidc-connection",
   "path":[
     "/bin/wintergw2025/secret-data"
   ],
-  "idp":"azure",
+  "idp":"oidc-idp",
   "validatorName":"offlineTokenValidator",
   "service.ranking:Integer": -5
 }

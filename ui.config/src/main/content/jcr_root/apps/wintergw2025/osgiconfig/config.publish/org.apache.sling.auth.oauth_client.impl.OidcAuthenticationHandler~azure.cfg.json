@@ -1,9 +1,0 @@
-{
-  "callbackUri":"https://publish-p148861-e340062-cmstg.adobeaemcloud.com/content/wintergw2025/us/en/oauth2-authenticated/j_security_check",
-  "path":[
-    "/content/wintergw2025/us/en/oauth2-authenticated"
-  ],
-  "idp":"azure",
-  "defaultConnectionName":"azure",
-  "audience": [ "https://my-aem.com" ]
-}
