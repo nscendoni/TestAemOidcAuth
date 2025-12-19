@@ -1,0 +1,21 @@
+<div class="cmp-authlinks" data-sly-use.clientlib="/libs/granite/sightly/templates/clientlib.html">
+    <p>This demo showcases two authentication methods with Keycloak.</p>
+    <p><strong>Test Credentials:</strong> Username: <code>test</code> / <code>test</code></p>
+    
+    <div class="cmp-authlinks__section">
+        <h3>OAuth2 / OIDC Authentication</h3>
+        <p>This page is accessible only to users in the test-group.
+            If you try to access being logged with SAML, you cannot see it and receive a 404, because keycloak is configured to not sent membership of test-group via SAML.
+        </p>
+        <p><a class="cmp-authlinks__link" href="http://localhost:8085/content/wintergw2025/us/en/oauth2-authenticated.html">Go to OAuth2 Page</a></p>
+    </div>
+    
+    <div class="cmp-authlinks__section">
+        <h3>SAML Authentication</h3>
+        <p>This page is accessible only to users in the offline_access group.
+            If you try to access being logged with OAuth2, you can see it, because keycloak is configured to sent membership of offline_access group via OIDC.
+        </p>
+        <p><a class="cmp-authlinks__link" href="http://localhost:8085/content/wintergw2025/us/en/saml-authenticated.html">Go to SAML Page</a></p>
+    </div>
+</div>
+

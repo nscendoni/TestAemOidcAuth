@@ -74,6 +74,40 @@ The `saml_setup.sh` script runs automatically at container startup and:
 
 The project also includes OIDC configuration for OAuth2-based authentication. This can be used as an alternative or in addition to SAML.
 
+### Access Control Lists (ACLs) for External Groups
+
+This demo uses **repoinit** to configure ACLs that restrict access to protected pages based on **external group membership** from Keycloak. The groups are synchronized from Keycloak to AEM during authentication.
+
+#### Configuration
+
+The ACL configuration is defined in:
+`ui.config/src/main/content/jcr_root/apps/wintergw2025/osgiconfig/config.publish/org.apache.sling.jcr.repoinit.RepositoryInitializer~saml-access.cfg.json`
+
+#### Protected Pages and Required Groups
+
+| Page | Path | Required External Group | Notes |
+|------|------|------------------------|-------|
+| **SAML Authenticated** | `/content/wintergw2025/us/en/saml-authenticated` | `offline_access;saml-idp` | Accessible to users with `offline_access` role via SAML |
+| **OAuth2 Authenticated** | `/content/wintergw2025/us/en/oauth2-authenticated` | `test-group` | Accessible to users in `test-group` via OIDC |
+
+#### How It Works
+
+1. **Deny Everyone**: By default, `jcr:read` is denied for `everyone` on both protected pages
+2. **Allow External Groups**: Specific external groups are granted `jcr:read` permission using the `ACLOptions=ignoreMissingPrincipal` option (required since the group may not exist until a user authenticates)
+
+#### External Group Naming Convention
+
+- **SAML groups**: Use the format `{group-name};{idp-suffix}` (e.g., `offline_access;saml-idp`)
+- **OIDC groups**: Use the group name as-is (e.g., `test-group`)
+
+#### Keycloak Group Membership
+
+The `test` user in Keycloak has the following group memberships:
+- `offline_access` - Sent in SAML assertions, allowing access to the SAML page
+- **Note**: If you authenticate via SAML and try to access the OAuth2 page, you will get a 404 because `test-group` membership is not sent in SAML assertions by default
+- `test-group` - Sent when autehnticate via OIDC
+- **Note**: If you authenticate via OIDC and try to access the Saml page, you will get a 404 because `offline_access` membership is not sent via OIDC
+
 ### Environment Variables
 
 The following environment variables can be customized in your `.env` file:
