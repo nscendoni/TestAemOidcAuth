@@ -1,0 +1,6 @@
+{
+    "scripts": [
+        "create service user group-provisioner with path system/wintergw2025",
+        "set ACL for group-provisioner\n  allow jcr:read,jcr:readAccessControl,jcr:modifyAccessControl,rep:userManagement,rep:write on /home/users\n  allow jcr:read,jcr:readAccessControl,jcr:modifyAccessControl,rep:userManagement,rep:write on /home/groups\nend"
+    ]
+}

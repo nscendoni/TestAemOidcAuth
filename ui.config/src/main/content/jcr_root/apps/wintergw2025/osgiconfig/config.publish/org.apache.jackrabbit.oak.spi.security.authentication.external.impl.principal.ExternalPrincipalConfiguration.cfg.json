@@ -1,0 +1,8 @@
+{
+    "protectExternalIdentities":"Warn",
+    "systemPrincipalNames":[
+      "sling-distribution",
+      "saml-migration-service",
+      "group-provisioner"
+    ]
+  }

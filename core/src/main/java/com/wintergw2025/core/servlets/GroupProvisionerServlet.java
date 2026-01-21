@@ -1,0 +1,346 @@
+/*
+ *  Copyright 2015 Adobe Systems Incorporated
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+package com.wintergw2025.core.servlets;
+
+import org.apache.jackrabbit.api.JackrabbitSession;
+import org.apache.jackrabbit.api.security.user.Authorizable;
+import org.apache.jackrabbit.api.security.user.Group;
+import org.apache.jackrabbit.api.security.user.User;
+import org.apache.jackrabbit.api.security.user.UserManager;
+import org.apache.jackrabbit.oak.spi.security.authentication.external.ExternalIdentityRef;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.servlets.SlingAllMethodsServlet;
+import org.apache.sling.jcr.api.SlingRepository;
+import org.apache.sling.servlets.annotations.SlingServletPaths;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import javax.jcr.Value;
+import javax.jcr.ValueFactory;
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Servlet that adds external principal names to a user for dynamic group membership.
+ * Accessible at: /bin/wintergw2025/group-provisioner
+ * 
+ * This servlet opens an Oak session with the "group-provisioner" service user and adds
+ * a principalName to the rep:externalPrincipalNames attribute of a specified user.
+ * 
+ * The rep:externalPrincipalNames property on a user enables dynamic group membership
+ * where the user becomes a member of groups that have matching external principal names.
+ * 
+ * If the group (using principalName as groupId) doesn't exist, it will be created as 
+ * an external group with rep:externalId.
+ * 
+ * Usage:
+ *   POST /bin/wintergw2025/group-provisioner?userId=<userId>&principalName=<principalName>
+ *   
+ * If no userId is provided, it uses the currently logged-in user.
+ */
+@Component(service = { Servlet.class })
+@SlingServletPaths("/bin/wintergw2025/group-provisioner")
+@ServiceDescription("Group Provisioner Servlet - Adds external principal names to users for dynamic group membership")
+public class GroupProvisionerServlet extends SlingAllMethodsServlet {
+
+    private static final long serialVersionUID = 1L;
+    private static final Logger LOG = LoggerFactory.getLogger(GroupProvisionerServlet.class);
+    
+    private static final String SERVICE_USER = "group-provisioner";
+    private static final String DEFAULT_IDP_NAME = "saml-idp";
+    private static final String DEFAULT_PRINCIPAL_NAME = "marketing:saml-idp";
+    private static final String REP_EXTERNAL_PRINCIPAL_NAMES = "rep:externalPrincipalNames";
+    private static final String REP_EXTERNAL_ID = "rep:externalId";
+
+    @Reference
+    private SlingRepository repository;
+
+    @Override
+    protected void doPost(final SlingHttpServletRequest request,
+                          final SlingHttpServletResponse response) throws ServletException, IOException {
+        
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter writer = response.getWriter();
+        
+        // Get the userId parameter, or use the currently logged-in user
+        String userId = request.getParameter("userId");
+        if (userId == null || userId.trim().isEmpty()) {
+            // Get the current user from the request
+            Session requestSession = request.getResourceResolver().adaptTo(Session.class);
+            if (requestSession != null) {
+                userId = requestSession.getUserID();
+            }
+        }
+        
+        if (userId == null || userId.trim().isEmpty() || "anonymous".equals(userId)) {
+            response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
+            writer.write("{\"success\": false, \"error\": \"No userId provided and no authenticated user found\"}");
+            return;
+        }
+        
+        // Get the principalName parameter - this is used both as the external principal name 
+        // and as the groupId for creating the external group
+        String principalName = request.getParameter("principalName");
+        if (principalName == null || principalName.trim().isEmpty()) {
+            principalName = DEFAULT_PRINCIPAL_NAME;
+        }
+        
+        // Get the idpName parameter for the external group's rep:externalId
+        String idpName = request.getParameter("idpName");
+        if (idpName == null || idpName.trim().isEmpty()) {
+            idpName = DEFAULT_IDP_NAME;
+        }
+        
+        LOG.info("GroupProvisionerServlet: Adding external principal '{}' to user '{}'", 
+                principalName, userId);
+        
+        Session serviceSession = null;
+        try {
+            // Login as the service user using SlingRepository.loginService()
+            serviceSession = repository.loginService(SERVICE_USER, null);
+            UserManager userManager = ((JackrabbitSession) serviceSession).getUserManager();
+            ValueFactory valueFactory = serviceSession.getValueFactory();
+            
+            LOG.info("Service session opened with user: {}", serviceSession.getUserID());
+            
+            // Ensure the group exists as an external group (using principalName as groupId)
+            boolean groupCreated = ensureExternalGroupExists(userManager, valueFactory, principalName, idpName);
+            
+            // Find the user
+            Authorizable authorizable = userManager.getAuthorizable(userId);
+            
+            if (authorizable == null) {
+                LOG.error("User '{}' not found", userId);
+                response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
+                writer.write("{\"success\": false, \"error\": \"User '" + escapeJson(userId) + "' not found\"}");
+                return;
+            }
+            
+            if (authorizable.isGroup()) {
+                LOG.error("Authorizable '{}' is a group, not a user", userId);
+                response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
+                writer.write("{\"success\": false, \"error\": \"'" + escapeJson(userId) + "' is a group, not a user\"}");
+                return;
+            }
+            
+            User user = (User) authorizable;
+            
+            // Get existing external principal names
+            Value[] existingValues = user.getProperty(REP_EXTERNAL_PRINCIPAL_NAMES);
+            List<String> principalNames = new ArrayList<>();
+            
+            if (existingValues != null) {
+                for (Value value : existingValues) {
+                    principalNames.add(value.getString());
+                }
+            }
+            
+            // Check if the principal name already exists
+            boolean alreadyExists = principalNames.contains(principalName);
+            if (!alreadyExists) {
+                // Add the new principal name
+                principalNames.add(principalName);
+                
+                // Create new Value array
+                Value[] newValues = new Value[principalNames.size()];
+                for (int i = 0; i < principalNames.size(); i++) {
+                    newValues[i] = valueFactory.createValue(principalNames.get(i));
+                }
+                
+                // Set the property on the user
+                user.setProperty(REP_EXTERNAL_PRINCIPAL_NAMES, newValues);
+            }
+            
+            // Save the session
+            serviceSession.save();
+            
+            StringBuilder message = new StringBuilder();
+            if (groupCreated) {
+                message.append("Created external group '").append(escapeJson(principalName)).append("'. ");
+            }
+            if (alreadyExists) {
+                message.append("External principal '").append(escapeJson(principalName))
+                       .append("' already exists on user '").append(escapeJson(userId)).append("'.");
+            } else {
+                message.append("Successfully added external principal '").append(escapeJson(principalName))
+                       .append("' to user '").append(escapeJson(userId)).append("'.");
+            }
+            
+            LOG.info(message.toString());
+            
+            writer.write("{\"success\": true, \"message\": \"" + message.toString() + 
+                    "\", \"groupCreated\": " + groupCreated + 
+                    "\", \"principalName\": \"" + escapeJson(principalName) +
+                    "\", \"allPrincipals\": " + toJsonArray(principalNames) + "}");
+            
+        } catch (RepositoryException e) {
+            LOG.error("Repository error while updating user", e);
+            response.setStatus(SlingHttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            writer.write("{\"success\": false, \"error\": \"Repository error: " + 
+                    escapeJson(e.getMessage()) + "\"}");
+        } finally {
+            if (serviceSession != null && serviceSession.isLive()) {
+                serviceSession.logout();
+            }
+        }
+    }
+    
+    /**
+     * Ensures that the external group exists. If it doesn't, creates it with rep:externalId.
+     * 
+     * @param userManager the UserManager
+     * @param valueFactory the ValueFactory for creating values
+     * @param groupId the group ID (same as principalName)
+     * @param idpName the identity provider name for rep:externalId
+     * @return true if the group was created, false if it already existed
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    private boolean ensureExternalGroupExists(UserManager userManager, ValueFactory valueFactory, 
+            String groupId, String idpName) throws RepositoryException {
+        
+        Authorizable existing = userManager.getAuthorizable(groupId);
+        
+        if (existing != null) {
+            if (existing.isGroup()) {
+                LOG.info("Group '{}' already exists", groupId);
+                return false;
+            } else {
+                throw new RepositoryException("An authorizable with ID '" + groupId + "' exists but is not a group");
+            }
+        }
+        
+        // Create the group with a Principal
+        final String finalGroupId = groupId;
+        Principal groupPrincipal = new Principal() {
+            @Override
+            public String getName() {
+                return finalGroupId;
+            }
+        };
+        
+        Group group = userManager.createGroup(groupPrincipal);
+        LOG.info("Created group '{}' at path '{}'", groupId, group.getPath());
+        
+        // Set the rep:externalId property to mark it as an external group
+        // Format: groupId;idpName (same format as ExternalIdentityRef.getString())
+        ExternalIdentityRef externalRef = new ExternalIdentityRef(groupId, idpName);
+        String externalId = externalRef.getString();
+        
+        group.setProperty(REP_EXTERNAL_ID, valueFactory.createValue(externalId));
+        LOG.info("Set rep:externalId='{}' on group '{}'", externalId, groupId);
+        
+        return true;
+    }
+    
+    @Override
+    protected void doGet(final SlingHttpServletRequest request,
+                         final SlingHttpServletResponse response) throws ServletException, IOException {
+        
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter writer = response.getWriter();
+        
+        // Get the userId parameter, or use the currently logged-in user
+        String userId = request.getParameter("userId");
+        if (userId == null || userId.trim().isEmpty()) {
+            Session requestSession = request.getResourceResolver().adaptTo(Session.class);
+            if (requestSession != null) {
+                userId = requestSession.getUserID();
+            }
+        }
+        
+        if (userId == null || userId.trim().isEmpty() || "anonymous".equals(userId)) {
+            response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
+            writer.write("{\"success\": false, \"error\": \"No userId provided and no authenticated user found\"}");
+            return;
+        }
+        
+        Session serviceSession = null;
+        try {
+            // Login as the service user using SlingRepository.loginService()
+            serviceSession = repository.loginService(SERVICE_USER, null);
+            UserManager userManager = ((JackrabbitSession) serviceSession).getUserManager();
+            
+            Authorizable authorizable = userManager.getAuthorizable(userId);
+            
+            if (authorizable == null) {
+                response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
+                writer.write("{\"success\": false, \"error\": \"User '" + escapeJson(userId) + "' not found\"}");
+                return;
+            }
+            
+            if (authorizable.isGroup()) {
+                response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
+                writer.write("{\"success\": false, \"error\": \"'" + escapeJson(userId) + "' is a group, not a user\"}");
+                return;
+            }
+            
+            User user = (User) authorizable;
+            Value[] existingValues = user.getProperty(REP_EXTERNAL_PRINCIPAL_NAMES);
+            List<String> principalNames = new ArrayList<>();
+            
+            if (existingValues != null) {
+                for (Value value : existingValues) {
+                    principalNames.add(value.getString());
+                }
+            }
+            
+            writer.write("{\"success\": true, \"userId\": \"" + escapeJson(userId) + 
+                    "\", \"externalPrincipalNames\": " + toJsonArray(principalNames) + "}");
+            
+        } catch (RepositoryException e) {
+            LOG.error("Repository error", e);
+            response.setStatus(SlingHttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            writer.write("{\"success\": false, \"error\": \"Repository error: " + 
+                    escapeJson(e.getMessage()) + "\"}");
+        } finally {
+            if (serviceSession != null && serviceSession.isLive()) {
+                serviceSession.logout();
+            }
+        }
+    }
+    
+    private String toJsonArray(List<String> items) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append("\"").append(escapeJson(items.get(i))).append("\"");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t");
+    }
+}
