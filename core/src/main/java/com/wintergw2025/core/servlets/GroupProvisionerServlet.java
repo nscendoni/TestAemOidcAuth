@@ -54,6 +54,7 @@ import java.util.List;
  * The rep:externalPrincipalNames property on a user enables dynamic group membership
  * where the user becomes a member of groups that have matching external principal names.
  * 
+ * If the user doesn't exist, it will be created as an external user with rep:externalId.
  * If the group (using principalName as groupId) doesn't exist, it will be created as 
  * an external group with rep:externalId.
  * 
@@ -110,7 +111,7 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
             principalName = DEFAULT_PRINCIPAL_NAME;
         }
         
-        // Get the idpName parameter for the external group's rep:externalId
+        // Get the idpName parameter for the external user/group's rep:externalId
         String idpName = request.getParameter("idpName");
         if (idpName == null || idpName.trim().isEmpty()) {
             idpName = DEFAULT_IDP_NAME;
@@ -131,24 +132,10 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
             // Ensure the group exists as an external group (using principalName as groupId)
             boolean groupCreated = ensureExternalGroupExists(userManager, valueFactory, principalName, idpName);
             
-            // Find the user
-            Authorizable authorizable = userManager.getAuthorizable(userId);
-            
-            if (authorizable == null) {
-                LOG.error("User '{}' not found", userId);
-                response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
-                writer.write("{\"success\": false, \"error\": \"User '" + escapeJson(userId) + "' not found\"}");
-                return;
-            }
-            
-            if (authorizable.isGroup()) {
-                LOG.error("Authorizable '{}' is a group, not a user", userId);
-                response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
-                writer.write("{\"success\": false, \"error\": \"'" + escapeJson(userId) + "' is a group, not a user\"}");
-                return;
-            }
-            
-            User user = (User) authorizable;
+            // Ensure the user exists as an external user
+            UserResult userResult = ensureExternalUserExists(userManager, valueFactory, userId, idpName);
+            User user = userResult.user;
+            boolean userCreated = userResult.created;
             
             // Get existing external principal names
             Value[] existingValues = user.getProperty(REP_EXTERNAL_PRINCIPAL_NAMES);
@@ -176,10 +163,19 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
                 user.setProperty(REP_EXTERNAL_PRINCIPAL_NAMES, newValues);
             }
             
+            // Set rep:lastDynamicSync and rep:lastSynced to current time
+            long now = System.currentTimeMillis();
+            user.setProperty("rep:lastDynamicSync", valueFactory.createValue(now));
+            user.setProperty("rep:lastSynced", valueFactory.createValue(now));
+
+            // Add the user to the group
             // Save the session
             serviceSession.save();
             
             StringBuilder message = new StringBuilder();
+            if (userCreated) {
+                message.append("Created external user '").append(escapeJson(userId)).append("'. ");
+            }
             if (groupCreated) {
                 message.append("Created external group '").append(escapeJson(principalName)).append("'. ");
             }
@@ -194,8 +190,9 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
             LOG.info(message.toString());
             
             writer.write("{\"success\": true, \"message\": \"" + message.toString() + 
-                    "\", \"groupCreated\": " + groupCreated + 
-                    "\", \"principalName\": \"" + escapeJson(principalName) +
+                    "\", \"userCreated\": " + userCreated +
+                    ", \"groupCreated\": " + groupCreated + 
+                    ", \"principalName\": \"" + escapeJson(principalName) +
                     "\", \"allPrincipals\": " + toJsonArray(principalNames) + "}");
             
         } catch (RepositoryException e) {
@@ -208,6 +205,66 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
                 serviceSession.logout();
             }
         }
+    }
+    
+    /**
+     * Result holder for user creation/lookup.
+     */
+    private static class UserResult {
+        final User user;
+        final boolean created;
+        
+        UserResult(User user, boolean created) {
+            this.user = user;
+            this.created = created;
+        }
+    }
+    
+    /**
+     * Ensures that the external user exists. If it doesn't, creates it with rep:externalId.
+     * 
+     * @param userManager the UserManager
+     * @param valueFactory the ValueFactory for creating values
+     * @param userId the user ID
+     * @param idpName the identity provider name for rep:externalId
+     * @return UserResult containing the user and whether it was created
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    private UserResult ensureExternalUserExists(UserManager userManager, ValueFactory valueFactory, 
+            String userId, String idpName) throws RepositoryException {
+        
+        Authorizable existing = userManager.getAuthorizable(userId);
+        
+        if (existing != null) {
+            if (!existing.isGroup()) {
+                LOG.info("User '{}' already exists", userId);
+                return new UserResult((User) existing, false);
+            } else {
+                throw new RepositoryException("An authorizable with ID '" + userId + "' exists but is a group, not a user");
+            }
+        }
+        
+        // Create the user with a Principal
+        final String finalUserId = userId;
+        Principal userPrincipal = new Principal() {
+            @Override
+            public String getName() {
+                return finalUserId;
+            }
+        };
+        
+        User user = userManager.createUser(userId, null, userPrincipal, null);
+        LOG.info("Created user '{}' at path '{}'", userId, user.getPath());
+        
+        // Set the rep:externalId property to mark it as an external user
+        // Format: userId;idpName (same format as ExternalIdentityRef.getString())
+        ExternalIdentityRef externalRef = new ExternalIdentityRef(userId, idpName);
+        String externalId = externalRef.getString();
+        
+        user.setProperty(REP_EXTERNAL_ID, valueFactory.createValue(externalId));
+        LOG.info("Set rep:externalId='{}' on user '{}'", externalId, userId);
+        
+        return new UserResult(user, true);
     }
     
     /**
