@@ -74,6 +74,87 @@ The `saml_setup.sh` script runs automatically at container startup and:
 
 The project also includes OIDC configuration for OAuth2-based authentication. This can be used as an alternative or in addition to SAML.
 
+### Custom User and Group Provisioning
+
+This branch demonstrates a **custom approach to SAML authentication** where users and group memberships are **not automatically created by the SAML authentication handler**. Instead, custom servlets handle the provisioning of users, groups, and their relationships using AEM's external identity system.
+
+This approach is useful when you need more control over user and group creation, or when you want to implement custom business logic for group membership management.
+
+#### GroupProvisionerServlet
+
+**Endpoint:** `/bin/wintergw2025/group-provisioner`
+
+This servlet provisions external users and groups with dynamic group membership using the `rep:externalPrincipalNames` mechanism.
+
+**Features:**
+- Creates external users with `rep:externalId` if they don't exist
+- Creates external groups with `rep:externalId` if they don't exist
+- Adds external principal names to users for dynamic group membership
+- Works without authentication (accessible via anonymous requests)
+
+**Usage:**
+```bash
+# Add external principal to a user
+curl -X POST "http://localhost:4503/bin/wintergw2025/group-provisioner?userId=testuser&principalName=marketing:saml-idp&idpName=saml-idp"
+
+# Get external principals for a user
+curl -X GET "http://localhost:4503/bin/wintergw2025/group-provisioner?userId=testuser"
+```
+
+**How it works:**
+1. Logs in as service user `group-provisioner`
+2. Creates the user as an external user if it doesn't exist (with `rep:externalId`)
+3. Creates the group as an external group if it doesn't exist (with `rep:externalId`)
+4. Adds the principal name to the user's `rep:externalPrincipalNames` property
+5. The user automatically becomes a member of any group with a matching external principal
+
+#### GroupMigrationServlet
+
+**Endpoint:** `/bin/wintergw2025/group-migration`
+
+This servlet migrates existing local groups to external groups, enabling them to work with the external identity system.
+
+**Features:**
+- Migrates local group members to external identity system
+- Ensures all user members have `rep:externalId` set
+- Creates a new external group with format: `<localGroupId>;<idpName>`
+- Adds the external group as a member of the original local group
+- Updates all user members with the external group principal
+
+**Usage:**
+```bash
+# Migrate a local group to external group
+curl -X POST "http://localhost:4503/bin/wintergw2025/group-migration?groupPath=/home/groups/c/content-authors&idpName=saml-idp"
+
+# Get servlet information
+curl -X GET "http://localhost:4503/bin/wintergw2025/group-migration"
+```
+
+**How it works:**
+1. Logs in as service user `group-provisioner`
+2. Retrieves the local group at the specified path
+3. For each user member:
+   - Adds `rep:externalId` if missing (format: `userId;idpName`)
+   - Adds the external group principal to `rep:externalPrincipalNames`
+4. Creates an external group with ID: `<localGroupId>;<idpName>`
+5. Adds the external group as a member of the local group
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully migrated group 'content-authors'...",
+  "localGroupId": "content-authors",
+  "externalGroupId": "content-authors;saml-idp",
+  "usersProcessed": 5,
+  "usersUpdated": 5,
+  "usersWithExternalIdAdded": 3,
+  "groupMembersSkipped": 0,
+  "processedUsers": ["user1", "user2", "user3", "user4", "user5"],
+  "skippedGroups": []
+}
+```
+
 ### Access Control Lists (ACLs) for External Groups
 
 This demo uses **repoinit** to configure ACLs that restrict access to protected pages based on **external group membership** from Keycloak. The groups are synchronized from Keycloak to AEM during authentication.
