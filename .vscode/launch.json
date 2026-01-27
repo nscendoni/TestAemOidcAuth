@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Attach to AEM (localhost:5006)",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 5006,
+            "timeout": 30000,
+            "projectName": "wintergw2025"
+        }
+    ]
+}
