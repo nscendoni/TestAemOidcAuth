@@ -81,13 +81,15 @@ services:
       - ./dispatcher/src/conf.dispatcher.d/filters/filters.any:/etc/httpd/conf.dispatcher.d/filters/filters.any
       - ./dispatcher/src/conf.dispatcher.d/filters/default_filters.any:/etc/httpd/conf.dispatcher.d/filters/default_filters.any
       - ./dispatcher/src/conf.dispatcher.d/available_farms/default.farm:/etc/httpd/conf.dispatcher.d/available_farms/default.farm
-      - ./dispatcher/src/conf.d/available_vhosts/default.vhost:/etc/httpd/conf.d/available_vhosts/default.vhost
+      - ./dispatcher/src/conf.d/available_vhosts/wintergw2025.vhost:/etc/httpd/conf.d/available_vhosts/default.vhost
+      - ./dispatcher/src/conf.d/available_vhosts/wintergw2025.vhost:/etc/httpd/conf.d/available_vhosts/wintergw2025.vhost
       - ./dispatcher/src/conf.d/enabled_vhosts/README:/etc/httpd/conf.d/enabled_vhosts/README
-      - ./dispatcher/src/conf.d/enabled_vhosts/default.vhost:/etc/httpd/conf.d/enabled_vhosts/default.vhost
+      - ./dispatcher/src/conf.d/available_vhosts/wintergw2025.vhost:/etc/httpd/conf.d/enabled_vhosts/default.vhost
       - ./dispatcher/src/conf.d/variables/custom.vars:/etc/httpd/conf.d/variables/custom.vars
       - ./dispatcher/src/conf.d/variables/global.vars:/etc/httpd/conf.d/variables/global.vars
       - ./dispatcher/src/conf.d/dispatcher_vhost.conf:/etc/httpd/conf.d/dispatcher_vhost.conf
       - ./dispatcher/src/conf.d/rewrites/default_rewrite.rules:/etc/httpd/conf.d/rewrites/default_rewrite.rules
       - ./dispatcher/src/conf.d/rewrites/rewrite.rules:/etc/httpd/conf.d/rewrites/rewrite.rules
+      - ./dispatcher/src/htdocs/error-500.html:/var/www/html/default/error-500.html
     depends_on:
       - aem-publish

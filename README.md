@@ -274,6 +274,12 @@ You can find all the options, including enabling trace logs by running: `./bin/d
 
 Remark: to deploy dispatcher configuration you need to create a Web Tier Config pipeline. You also need to configure the Code Location to: `dispatcher/src`. Documentation on how to debug is [here](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/validation-debug)
 
+## Custom Error Pages in Dispatcher
+
+This project includes a custom 500 error page that is served by the AEM when errors occur in the OAuth2 authenticated context.
+
+For more details, see [dispatcher/ERROR_HANDLING.md](dispatcher/ERROR_HANDLING.md).
+
 ## How to run dispatcher validation
 ```bash
 cd dispatcher-sdk-2.0.258

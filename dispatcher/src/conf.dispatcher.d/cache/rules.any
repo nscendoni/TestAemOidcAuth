@@ -21,3 +21,9 @@ $include "./default_rules.any"
     /glob "/bin/*"
     /type "deny"
 }
+
+# Allow caching of error pages
+/0103 {
+    /glob "/content/*/error-*.html"
+    /type "allow"
+}
