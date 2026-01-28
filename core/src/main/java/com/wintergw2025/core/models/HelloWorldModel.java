@@ -98,14 +98,48 @@ public class HelloWorldModel {
                 "Path: " + user.getPath() + "\n" +
                 "PrincipalName: " + user.getPrincipal().getName() + "\n";
             
-            Value[] givenNameValues = user.getProperty("profile/given_name");
-            if (givenNameValues != null && givenNameValues.length > 0) {
-                message += "Given Name: " + givenNameValues[0].getString() + "\n";
+            // Print all properties of the user
+            // Print properties under the user's profile node (not .profile)
+            javax.jcr.Node userNode = null;
+            try {
+                userNode = session.getNode(user.getPath());
+            } catch (RepositoryException e) {
+                message += "Unable to retrieve user node for profile properties: " + e.getMessage() + "\n";
             }
-            
-            Value[] familyNameValues = user.getProperty("profile/family_name");
-            if (familyNameValues != null && familyNameValues.length > 0) {
-                message += "Family Name: " + familyNameValues[0].getString() + "\n";
+
+            if (userNode != null) {
+                if (userNode.hasNode("profile")) {
+                    try {
+                        javax.jcr.Node profileNode = userNode.getNode("profile");
+                        message += "User Profile Properties (profile):\n";
+                        javax.jcr.PropertyIterator pi = profileNode.getProperties();
+                        while (pi.hasNext()) {
+                            javax.jcr.Property prop = pi.nextProperty();
+                            // Skip jcr:primaryType and other protected properties if needed
+                            String propName = prop.getName();
+                            if ("jcr:primaryType".equals(propName)) {
+                                continue;
+                            }
+                            message += propName + ": ";
+                            if (prop.isMultiple()) {
+                                javax.jcr.Value[] values = prop.getValues();
+                                for (int i = 0; i < values.length; i++) {
+                                    message += values[i].getString();
+                                    if (i < values.length - 1) {
+                                        message += ", ";
+                                    }
+                                }
+                            } else {
+                                message += prop.getValue().getString();
+                            }
+                            message += "\n";
+                        }
+                    } catch (RepositoryException e) {
+                        message += "Error getting profile properties: " + e.getMessage() + "\n";
+                    }
+                } else {
+                    message += "No profile node found for user.\n";
+                }
             }
             
             message += "\nGroups:\n";
