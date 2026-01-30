@@ -17,14 +17,15 @@ package com.wintergw2025.core.models;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.security.Principal;
 import java.util.Collections;
 
+import javax.jcr.Node;
+import javax.jcr.Property;
+import javax.jcr.PropertyIterator;
 import javax.jcr.Session;
 import javax.jcr.Value;
 
@@ -82,14 +83,41 @@ class HelloWorldModelTest {
         when(mockUser.getPrincipal()).thenReturn(mockPrincipal);
         when(mockPrincipal.getName()).thenReturn(TEST_USER_ID);
 
-        // Setup user properties (given_name and family_name)
+        // Mock JCR Node structure for user profile properties
+        Node mockUserNode = mock(Node.class);
+        Node mockProfileNode = mock(Node.class);
+        
+        // Setup user node
+        when(mockSession.getNode(TEST_USER_PATH)).thenReturn(mockUserNode);
+        when(mockUserNode.hasNode("profile")).thenReturn(true);
+        when(mockUserNode.getNode("profile")).thenReturn(mockProfileNode);
+        
+        // Setup profile properties
+        Property mockGivenNameProperty = mock(Property.class);
+        when(mockGivenNameProperty.getName()).thenReturn("given_name");
+        when(mockGivenNameProperty.isMultiple()).thenReturn(false);
         Value mockGivenNameValue = mock(Value.class);
         when(mockGivenNameValue.getString()).thenReturn(TEST_GIVEN_NAME);
-        when(mockUser.getProperty("profile/given_name")).thenReturn(new Value[]{mockGivenNameValue});
-
+        when(mockGivenNameProperty.getValue()).thenReturn(mockGivenNameValue);
+        
+        Property mockFamilyNameProperty = mock(Property.class);
+        when(mockFamilyNameProperty.getName()).thenReturn("family_name");
+        when(mockFamilyNameProperty.isMultiple()).thenReturn(false);
         Value mockFamilyNameValue = mock(Value.class);
         when(mockFamilyNameValue.getString()).thenReturn(TEST_FAMILY_NAME);
-        when(mockUser.getProperty("profile/family_name")).thenReturn(new Value[]{mockFamilyNameValue});
+        when(mockFamilyNameProperty.getValue()).thenReturn(mockFamilyNameValue);
+        
+        // Mock PropertyIterator
+        PropertyIterator mockPropertyIterator = mock(PropertyIterator.class);
+        when(mockPropertyIterator.hasNext())
+            .thenReturn(true)
+            .thenReturn(true)
+            .thenReturn(false);
+        when(mockPropertyIterator.nextProperty())
+            .thenReturn(mockGivenNameProperty)
+            .thenReturn(mockFamilyNameProperty);
+        
+        when(mockProfileNode.getProperties()).thenReturn(mockPropertyIterator);
 
         // Setup group mock
         Principal mockGroupPrincipal = mock(Principal.class);

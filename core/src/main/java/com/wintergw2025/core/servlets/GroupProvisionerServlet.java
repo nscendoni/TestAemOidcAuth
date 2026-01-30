@@ -163,10 +163,11 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
                 user.setProperty(REP_EXTERNAL_PRINCIPAL_NAMES, newValues);
             }
             
-            // Update sync timestamps set it to 100 years from now to prevent membership information to expire
-            // TODO: Create a Jira ticket in Oak regarding depth 0 not respected for dynamic membership
+            // Update sync timestamps to far future (workaround for OAK-12079)
+            // Set to 10 years in the future to prevent premature cleanup of external group memberships
+            // See: https://issues.apache.org/jira/browse/OAK-12079
             java.util.Calendar future = java.util.Calendar.getInstance();
-            future.add(java.util.Calendar.YEAR, 100);
+            future.add(java.util.Calendar.YEAR, 10);
             user.setProperty("rep:lastDynamicSync", valueFactory.createValue(future));
             user.setProperty("rep:lastSynced", valueFactory.createValue(future));
 
