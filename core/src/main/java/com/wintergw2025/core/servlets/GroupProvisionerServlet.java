@@ -76,7 +76,9 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
     private static final String DEFAULT_PRINCIPAL_NAME = "marketing:saml-idp";
     private static final String REP_EXTERNAL_PRINCIPAL_NAMES = "rep:externalPrincipalNames";
     private static final String REP_EXTERNAL_ID = "rep:externalId";
-
+    
+    // Authorized technical account from Adobe Developer Console Server-to-Server integration
+    private static final String ALLOWED_TECHNICAL_ACCOUNT = "4FFECF71-3760-49F2-A883-B741AA1893C6@TECHACCT.ADOBE.COM";
     @Reference
     private SlingRepository repository;
 
@@ -84,9 +86,22 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
     protected void doPost(final SlingHttpServletRequest request,
                           final SlingHttpServletResponse response) throws ServletException, IOException {
         
+        LOG.info("=== GroupProvisionerServlet.doPost() STARTED ===");
+        LOG.info("Request URI: {}", request.getRequestURI());
+        LOG.info("Remote User: {}", request.getRemoteUser());
+        LOG.info("Auth Type: {}", request.getAuthType());
+        
+        Session session = request.getResourceResolver().adaptTo(Session.class);
+        LOG.info("Session User ID: {}", session != null ? session.getUserID() : "NULL SESSION");
+        
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter writer = response.getWriter();
+        
+        // Check if the caller is the authorized technical account
+        if (!isAuthorizedCaller(request, response, writer)) {
+            return;
+        }
         
         // Get the userId parameter, or use the currently logged-in user
         String userId = request.getParameter("userId");
@@ -101,6 +116,7 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
         if (userId == null || userId.trim().isEmpty() || "anonymous".equals(userId)) {
             response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
             writer.write("{\"success\": false, \"error\": \"No userId provided and no authenticated user found\"}");
+            writer.flush();
             return;
         }
         
@@ -198,12 +214,14 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
                     ", \"groupCreated\": " + groupCreated + 
                     ", \"principalName\": \"" + escapeJson(principalName) +
                     "\", \"allPrincipals\": " + toJsonArray(principalNames) + "}");
+            writer.flush();
             
         } catch (RepositoryException e) {
             LOG.error("Repository error while updating user", e);
             response.setStatus(SlingHttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             writer.write("{\"success\": false, \"error\": \"Repository error: " + 
                     escapeJson(e.getMessage()) + "\"}");
+            writer.flush();
         } finally {
             if (serviceSession != null && serviceSession.isLive()) {
                 serviceSession.logout();
@@ -322,22 +340,29 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
     protected void doGet(final SlingHttpServletRequest request,
                          final SlingHttpServletResponse response) throws ServletException, IOException {
         
+        LOG.info("=== GroupProvisionerServlet.doGet() STARTED ===");
+        LOG.info("Request URI: {}", request.getRequestURI());
+        LOG.info("Remote User: {}", request.getRemoteUser());
+        LOG.info("Auth Type: {}", request.getAuthType());
+        
+        Session session = request.getResourceResolver().adaptTo(Session.class);
+        LOG.info("Session User ID: {}", session != null ? session.getUserID() : "NULL SESSION");
+        
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter writer = response.getWriter();
         
-        // Get the userId parameter, or use the currently logged-in user
-        String userId = request.getParameter("userId");
-        if (userId == null || userId.trim().isEmpty()) {
-            Session requestSession = request.getResourceResolver().adaptTo(Session.class);
-            if (requestSession != null) {
-                userId = requestSession.getUserID();
-            }
+        // Check if the caller is the authorized technical account
+        if (!isAuthorizedCaller(request, response, writer)) {
+            return;
         }
         
-        if (userId == null || userId.trim().isEmpty() || "anonymous".equals(userId)) {
+        // Get the userId parameter
+        String userId = request.getParameter("userId");
+        if (userId == null || userId.trim().isEmpty()) {
             response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"success\": false, \"error\": \"No userId provided and no authenticated user found\"}");
+            writer.write("{\"success\": false, \"error\": \"No userId provided\"}");
+            writer.flush();
             return;
         }
         
@@ -352,12 +377,14 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
             if (authorizable == null) {
                 response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
                 writer.write("{\"success\": false, \"error\": \"User '" + escapeJson(userId) + "' not found\"}");
+                writer.flush();
                 return;
             }
             
             if (authorizable.isGroup()) {
                 response.setStatus(SlingHttpServletResponse.SC_BAD_REQUEST);
                 writer.write("{\"success\": false, \"error\": \"'" + escapeJson(userId) + "' is a group, not a user\"}");
+                writer.flush();
                 return;
             }
             
@@ -373,17 +400,47 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
             
             writer.write("{\"success\": true, \"userId\": \"" + escapeJson(userId) + 
                     "\", \"externalPrincipalNames\": " + toJsonArray(principalNames) + "}");
+            writer.flush();
             
         } catch (RepositoryException e) {
             LOG.error("Repository error", e);
             response.setStatus(SlingHttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             writer.write("{\"success\": false, \"error\": \"Repository error: " + 
                     escapeJson(e.getMessage()) + "\"}");
+            writer.flush();
         } finally {
             if (serviceSession != null && serviceSession.isLive()) {
                 serviceSession.logout();
             }
         }
+    }
+    
+    /**
+     * Checks if the caller is the authorized technical account.
+     * 
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @param writer the response writer
+     * @return true if authorized, false otherwise (response is already written)
+     */
+    private boolean isAuthorizedCaller(SlingHttpServletRequest request, 
+                                       SlingHttpServletResponse response, 
+                                       PrintWriter writer) {
+        Session session = request.getResourceResolver().adaptTo(Session.class);
+        String callerId = session != null ? session.getUserID() : null;
+        
+        LOG.info("isAuthorizedCaller - Caller ID from session: '{}', Expected: '{}'", callerId, ALLOWED_TECHNICAL_ACCOUNT);
+        
+        if (!ALLOWED_TECHNICAL_ACCOUNT.equals(callerId)) {
+            LOG.warn("Unauthorized access attempt by user: '{}' (expected: '{}')", callerId, ALLOWED_TECHNICAL_ACCOUNT);
+            response.setStatus(SlingHttpServletResponse.SC_FORBIDDEN);
+            writer.write("{\"success\": false, \"error\": \"Access denied. Only authorized technical accounts can access this endpoint. Caller: " + escapeJson(callerId) + "\"}");
+            writer.flush();
+            return false;
+        }
+        
+        LOG.info("Authorized access by technical account: {}", callerId);
+        return true;
     }
     
     private String toJsonArray(List<String> items) {
