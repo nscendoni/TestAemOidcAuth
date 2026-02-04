@@ -1,0 +1,7 @@
+kind: "API"
+version: "1"
+data:
+  allowedClientIDs:
+    publish:
+      - "dea80e730113452b95f804d99a055394"
+      - "dev-console-stage"

@@ -1,5 +1,7 @@
 {
     "scripts": [
+        "create path (cq:Page) /content/wintergw2025/us/en/saml-authenticated",
+        "create path (cq:Page) /content/wintergw2025/us/en/oauth2-authenticated",
         "set ACL for \"offline_access;saml-idp\" (ACLOptions=ignoreMissingPrincipal)\n  allow jcr:read on /content/wintergw2025/us/en/saml-authenticated\nend",
         "set ACL on /content/wintergw2025/us/en/oauth2-authenticated\n  deny jcr:read for everyone\nend",
         "set ACL for \"/test-group\" (ACLOptions=ignoreMissingPrincipal)\n  allow jcr:read on /content/wintergw2025/us/en/oauth2-authenticated\nend"
