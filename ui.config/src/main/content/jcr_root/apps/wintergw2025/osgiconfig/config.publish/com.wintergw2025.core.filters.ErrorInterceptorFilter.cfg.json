@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "path.pattern": "/content/wintergw2025/us/en/oauth2-authenticated",
+  "redirect.path": "/content/wintergw2025/us/en/error.html",
+  "error.message": "No request cookie named sling.oauth-request-key found"
+}
