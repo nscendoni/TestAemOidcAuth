@@ -17,7 +17,12 @@ Include conf.d/variables/custom.vars
 	# Add header breadcrumbs for help in troubleshooting
 	<IfModule mod_headers.c>
 		Header add X-Vhost "publish"
+		# Add custom header when serving error page
+		Header always set x-aem-error-pass "true" env=ERROR_500
 	</IfModule>
+	
+	# Set environment variable when serving error-500.html
+	SetEnvIf Request_URI "^/error-500\.html$" ERROR_500
 	<Directory />
 		<IfModule disp_apache2.c>
 			# Some items cache with the wrong mime type
