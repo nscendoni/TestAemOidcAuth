@@ -2,12 +2,14 @@
   "acceptedClientIds":[
     "44N3IaIu6zpg2G1ZHMsiRr8lCknYiJA5",
     "6luQsbKCXEFQYwVQ196z8fPSL0truG0f",
-    "BaPHOww6AaturxTogJvFkOz67bNbBHZ5"
+    "BaPHOww6AaturxTogJvFkOz67bNbBHZ5",
+    "mcp-elc-client"
   ],
   "name":"offlineTokenValidator",
   "requiredAudiences":[
     "https://my-aem.com",
-    "https://publish-p148861-e340062-cmstg.adobeaemcloud.com/bin/wintergw2025/secret-data"
+    "https://publish-p148861-e340062-cmstg.adobeaemcloud.com/bin/wintergw2025/secret-data",
+    "mcp-elc-client"
   ],
   "requiredScopes":[
     "openid"
