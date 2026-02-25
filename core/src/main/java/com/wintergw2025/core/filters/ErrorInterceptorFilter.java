@@ -1,27 +1,20 @@
 package com.wintergw2025.core.filters;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.WriteListener;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
 
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.api.SlingHttpServletResponse;
-import org.apache.sling.engine.EngineConstants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.propertytypes.ServiceRanking;
+import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
+import org.osgi.service.http.whiteboard.Preprocessor;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -29,17 +22,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Custom filter to intercept 500 errors on OAuth2 authenticated content
+ * Custom preprocessor filter to intercept OAuth authentication errors
  * and redirect users to a custom error page.
+ * Implements Preprocessor like CORSFilter to run before authentication.
  */
-@Component(service = Filter.class,
-           property = {
-                   EngineConstants.SLING_FILTER_SCOPE + "=" + EngineConstants.FILTER_SCOPE_REQUEST,
-                   EngineConstants.SLING_FILTER_SCOPE + "=" + EngineConstants.FILTER_SCOPE_ERROR
-           })
+@Component(
+    service = {
+        Preprocessor.class,
+        Filter.class
+    },
+    property = {
+        "osgi.http.whiteboard.filter.regex=/.*",
+        HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT + "=(" + HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME + "=*)",
+        "service.ranking:Integer=" + Integer.MAX_VALUE,
+        "service.description:String=OAuth Error Interceptor"
+    }
+)
 @Designate(ocd = ErrorInterceptorFilter.Config.class)
-@ServiceRanking(1000) // Higher ranking to intercept early
-public class ErrorInterceptorFilter implements Filter {
+public class ErrorInterceptorFilter implements Preprocessor, Filter {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     
@@ -83,10 +83,15 @@ public class ErrorInterceptorFilter implements Filter {
     public void doFilter(final ServletRequest request, final ServletResponse response,
                          final FilterChain filterChain) throws IOException, ServletException {
 
-        final SlingHttpServletRequest slingRequest = (SlingHttpServletRequest) request;
-        final SlingHttpServletResponse slingResponse = (SlingHttpServletResponse) response;
-        
-        String requestPath = slingRequest.getRequestPathInfo().getResourcePath();
+        // Get request path - works for both Sling and non-Sling requests
+        String requestPath = null;
+        if (request instanceof SlingHttpServletRequest) {
+            SlingHttpServletRequest slingRequest = (SlingHttpServletRequest) request;
+            requestPath = slingRequest.getRequestPathInfo().getResourcePath();
+        } else if (request instanceof HttpServletRequest) {
+            HttpServletRequest httpRequest = (HttpServletRequest) request;
+            requestPath = httpRequest.getRequestURI();
+        }
         
         // Log filter execution for debugging
         logger.info("ErrorInterceptorFilter.doFilter() called for path: {}, enabled: {}, pattern: {}", 
@@ -97,62 +102,62 @@ public class ErrorInterceptorFilter implements Filter {
             filterChain.doFilter(request, response);
             return;
         }
-        
-        // Check if the request path matches our pattern
-        if (requestPath != null && requestPath.startsWith(pathPattern)) {
-            logger.info("Path matches pattern, intercepting request for: {}", requestPath);
-            
-            // Wrap the response to capture both status and body content
-            BufferingResponseWrapper responseWrapper = 
-                new BufferingResponseWrapper(slingResponse);
-            
-            try {
-                // Continue with the filter chain
-                filterChain.doFilter(request, responseWrapper);
-                
-                // Get the response body content
-                String responseBody = responseWrapper.getCapturedContent();
-                int statusCode = responseWrapper.getStatus();
-                
-                // Check if it's a 500 error AND contains our specific error message
-                if (statusCode == HttpServletResponse.SC_INTERNAL_SERVER_ERROR 
-                    && responseBody != null 
-                    && responseBody.contains(errorMessage)) {
-                    
-                    logger.info("500 error with message '{}' detected on path: {}, redirecting to: {}", 
-                               errorMessage, requestPath, redirectPath);
-                    
-                    // Clear any content and redirect
-                    if (!slingResponse.isCommitted()) {
-                        slingResponse.reset();
-                        slingResponse.sendRedirect(redirectPath);
-                    } else {
-                        logger.warn("Response already committed, cannot redirect from path: {}", 
-                                   requestPath);
-                        // Write the captured content since we can't redirect
-                        responseWrapper.writeTo(slingResponse);
-                    }
+
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+        try {
+            // Continue with the filter chain - wrapped in try-catch to intercept OAuth errors
+            filterChain.doFilter(request, response);
+
+        } catch (IllegalStateException e) {
+            // Check if this is the OAuth authentication error
+            String exceptionMessage = getFullExceptionMessage(e);
+            logger.info("IllegalStateException caught for path {}: {}", requestPath, exceptionMessage);
+
+            // Check if the path matches our pattern AND it's an OAuth-related error
+            // Handle both cases: "No cookies found" (not authenticated) and the configured error message (authenticated)
+            boolean isOAuthError = exceptionMessage.contains(errorMessage) ||
+                                   exceptionMessage.contains("No cookies found");
+
+            if (requestPath != null && requestPath.startsWith(pathPattern) && isOAuthError) {
+                logger.info("OAuth authentication error detected, redirecting from {} to {}",
+                           requestPath, redirectPath);
+
+                if (!httpResponse.isCommitted()) {
+                    httpResponse.sendRedirect(redirectPath);
                 } else {
-                    // No match, write the captured content to the actual response
-                    responseWrapper.writeTo(slingResponse);
-                }
-            } catch (Exception e) {
-                logger.error("Error in ErrorInterceptorFilter for path: {}", requestPath, e);
-                
-                // On exception, check if error message is in the exception
-                if (!slingResponse.isCommitted() && e.getMessage() != null 
-                    && e.getMessage().contains(errorMessage)) {
-                    slingResponse.reset();
-                    slingResponse.sendRedirect(redirectPath);
-                } else {
+                    logger.warn("Response already committed, cannot redirect from path: {}", requestPath);
                     throw e;
                 }
+            } else {
+                // Not the error we're looking for, re-throw
+                logger.debug("Exception doesn't match our criteria, re-throwing");
+                throw e;
             }
-        } else {
-            // Path doesn't match, continue normally
-            logger.debug("Path does not match pattern, passing through: {}", requestPath);
-            filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            logger.debug("Unexpected exception type in ErrorInterceptorFilter for path: {}", requestPath);
+            throw e;
         }
+    }
+
+    /**
+     * Extracts the full exception message including all causes
+     */
+    private String getFullExceptionMessage(Throwable exception) {
+        StringBuilder sb = new StringBuilder();
+        Throwable current = exception;
+
+        while (current != null) {
+            if (sb.length() > 0) {
+                sb.append(" | ");
+            }
+            if (current.getMessage() != null) {
+                sb.append(current.getMessage());
+            }
+            current = current.getCause();
+        }
+
+        return sb.toString();
     }
 
     @Override
@@ -163,115 +168,5 @@ public class ErrorInterceptorFilter implements Filter {
     @Override
     public void destroy() {
         // No cleanup needed
-    }
-
-    /**
-     * Response wrapper that buffers the response content and captures the HTTP status code
-     */
-    private static class BufferingResponseWrapper extends HttpServletResponseWrapper {
-        
-        private int status = HttpServletResponse.SC_OK;
-        private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        private PrintWriter writer;
-        private ServletOutputStream outputStream;
-
-        public BufferingResponseWrapper(HttpServletResponse response) {
-            super(response);
-        }
-
-        @Override
-        public PrintWriter getWriter() throws IOException {
-            if (writer == null) {
-                writer = new PrintWriter(new OutputStreamWriter(buffer, 
-                    getCharacterEncoding() != null ? getCharacterEncoding() : StandardCharsets.UTF_8.name()));
-            }
-            return writer;
-        }
-
-        @Override
-        public ServletOutputStream getOutputStream() throws IOException {
-            if (outputStream == null) {
-                outputStream = new ServletOutputStream() {
-                    @Override
-                    public void write(int b) throws IOException {
-                        buffer.write(b);
-                    }
-
-                    @Override
-                    public boolean isReady() {
-                        return true;
-                    }
-
-                    @Override
-                    public void setWriteListener(WriteListener listener) {
-                        // Not implemented
-                    }
-                };
-            }
-            return outputStream;
-        }
-
-        @Override
-        public void setStatus(int sc) {
-            this.status = sc;
-            super.setStatus(sc);
-        }
-
-        @Override
-        public void setStatus(int sc, String sm) {
-            this.status = sc;
-            super.setStatus(sc, sm);
-        }
-
-        @Override
-        public void sendError(int sc) throws IOException {
-            this.status = sc;
-            // Don't call super.sendError() as we want to buffer the content
-        }
-
-        @Override
-        public void sendError(int sc, String msg) throws IOException {
-            this.status = sc;
-            // Write the error message to our buffer
-            if (msg != null) {
-                getWriter().write(msg);
-                getWriter().flush();
-            }
-        }
-
-        public int getStatus() {
-            return status;
-        }
-
-        /**
-         * Get the captured response content as a String
-         */
-        public String getCapturedContent() {
-            if (writer != null) {
-                writer.flush();
-            }
-            try {
-                return buffer.toString(getCharacterEncoding() != null 
-                    ? getCharacterEncoding() 
-                    : StandardCharsets.UTF_8.name());
-            } catch (Exception e) {
-                return buffer.toString(StandardCharsets.UTF_8);
-            }
-        }
-
-        /**
-         * Write the buffered content to the actual response
-         */
-        public void writeTo(HttpServletResponse response) throws IOException {
-            if (writer != null) {
-                writer.flush();
-            }
-            
-            byte[] content = buffer.toByteArray();
-            if (content.length > 0) {
-                response.setContentLength(content.length);
-                response.getOutputStream().write(content);
-            }
-        }
     }
 }
