@@ -43,6 +43,16 @@
                         sling:resourceType="wintergw2025/components/button"
                         linkTarget="_self"
                         linkURL="/system/sling/logout"/>
+                    <button_idp
+                        jcr:created="{Date}2025-02-25T10:50:00.000Z"
+                        jcr:createdBy="nscendoni@adobe.com"
+                        jcr:lastModified="{Date}2025-02-25T10:50:00.000Z"
+                        jcr:lastModifiedBy="nscendoni@adobe.com"
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Logout from IdP"
+                        sling:resourceType="wintergw2025/components/button"
+                        linkTarget="_self"
+                        linkURL="/system/sling/logout?resource=/content/wintergw2025/us/en/oauth2-authenticated"/>
                     <helloworld
                         jcr:created="{Date}2025-12-09T16:37:14.995Z"
                         jcr:createdBy="nscendoni@adobe.com"

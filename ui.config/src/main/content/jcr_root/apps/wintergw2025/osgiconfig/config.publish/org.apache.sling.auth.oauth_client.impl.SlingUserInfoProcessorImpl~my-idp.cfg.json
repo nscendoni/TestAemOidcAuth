@@ -1,3 +1,4 @@
 {
-  "connection": "oidc-connection"
+  "connection": "oidc-connection",
+  "storeIdToken": true
 }

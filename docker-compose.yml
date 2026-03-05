@@ -41,6 +41,7 @@ services:
       - KEYCLOAK_SAML_CLIENT_ID=${KEYCLOAK_SAML_CLIENT_ID-test-saml}
       - AEM_PUBLISH_URL=http://localhost:4503
       - CERT_DIR=/opt/aem/certs
+      - AEM_SERVICE=cm-p111-e222
       - OPENSSL_PASS=${OPENSSL_PASS-admin}
       - MAVEN_REPOSITORY=/var/cache/maven
     volumes:

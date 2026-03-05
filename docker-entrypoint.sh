@@ -47,23 +47,6 @@ wait_for_aem() {
     echo "Waiting for AEM to be ready..."
     local count=0
     
-    # Wait for AEM product info (indicates AEM is running)
-    while true; do
-        if curl -u admin:admin -s -L \
-            -A "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/81.0" \
-            "http://localhost:${PORT}/system/console/productinfo" 2>/dev/null | grep -q "6.6.0"; then
-            break
-        fi
-        
-        count=$((count + 1))
-        if [ $count -gt 240 ]; then
-            echo "ERROR: AEM did not start in time"
-            exit 1
-        fi
-        echo "  Waiting for AEM to be ready... (attempt $count/240)"
-        sleep 5
-    done
-
     # Wait for login page (indicates Felix console is accessible)
     count=0
     while true; do
