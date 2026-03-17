@@ -42,8 +42,7 @@
                             <goal>bnd-process</goal>
                         </goals>
                         <configuration>
-                            <bnd><![CDATA[
-Import-Package: javax.annotation;version=0.0.0,*
+                            <bnd><![CDATA[Import-Package: javax.annotation;version=0.0.0,org.apache.jackrabbit.api;version=0.0.0,com.day.cq.wcm.api;version=0.0.0,*
                                 ]]></bnd>
                         </configuration>
                     </execution>
