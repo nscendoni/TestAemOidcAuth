@@ -6,6 +6,7 @@
   "idp":"oidc-idp",
   "defaultConnectionName":"oidc-connection",
   "audience": [ "https://my-aem.com" ],
+  "enableSPInitiatedSingleLogout": true,
   "logoutRedirectPath": "/content/wintergw2025/us/en.html",
   "logoutRedirectAllowedHosts": [ "localhost", "host.docker.internal" ]
 }

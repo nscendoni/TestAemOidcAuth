@@ -20,7 +20,6 @@ import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.User;
 import org.apache.jackrabbit.api.security.user.UserManager;
-import org.apache.jackrabbit.oak.spi.security.authentication.external.ExternalIdentityRef;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
@@ -257,9 +256,8 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
         LOG.info("Created user '{}' at path '{}'", userId, user.getPath());
         
         // Set the rep:externalId property to mark it as an external user
-        // Format: userId;idpName (same format as ExternalIdentityRef.getString())
-        ExternalIdentityRef externalRef = new ExternalIdentityRef(userId, idpName);
-        String externalId = externalRef.getString();
+        // Format: userId;idpName
+        String externalId = userId + ";" + idpName;
         
         user.setProperty(REP_EXTERNAL_ID, valueFactory.createValue(externalId));
         LOG.info("Set rep:externalId='{}' on user '{}'", externalId, userId);
@@ -304,9 +302,8 @@ public class GroupProvisionerServlet extends SlingAllMethodsServlet {
         LOG.info("Created group '{}' at path '{}'", groupId, group.getPath());
         
         // Set the rep:externalId property to mark it as an external group
-        // Format: groupId;idpName (same format as ExternalIdentityRef.getString())
-        ExternalIdentityRef externalRef = new ExternalIdentityRef(groupId, idpName);
-        String externalId = externalRef.getString();
+        // Format: groupId;idpName
+        String externalId = groupId + ";" + idpName;
         
         group.setProperty(REP_EXTERNAL_ID, valueFactory.createValue(externalId));
         LOG.info("Set rep:externalId='{}' on group '{}'", externalId, groupId);
