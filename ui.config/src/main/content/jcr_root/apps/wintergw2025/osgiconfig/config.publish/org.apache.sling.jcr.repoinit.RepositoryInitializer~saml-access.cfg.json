@@ -1,8 +1,3 @@
 {
-    "scripts": [
-        "create path (cq:Page) /content/wintergw2025\ncreate path (cq:Page) /content/wintergw2025/us\ncreate path (cq:Page) /content/wintergw2025/us/en\ncreate path (cq:Page) /content/wintergw2025/us/en/saml-authenticated\nset ACL on /content/wintergw2025/us/en/saml-authenticated\n  deny jcr:read for everyone\nend",
-        "set ACL for \"offline_access;saml-idp\" (ACLOptions=ignoreMissingPrincipal)\n  allow jcr:read on /content/wintergw2025/us/en/saml-authenticated\nend",
-        "create path (cq:Page) /content/wintergw2025/us/en/oauth2-authenticated\nset ACL on /content/wintergw2025/us/en/oauth2-authenticated\n  deny jcr:read for everyone\nend",
-        "set ACL for \"/test-group\" (ACLOptions=ignoreMissingPrincipal)\n  allow jcr:read on /content/wintergw2025/us/en/oauth2-authenticated\nend"
-    ]
+    "scripts": []
 }
