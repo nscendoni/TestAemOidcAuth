@@ -20,7 +20,7 @@
   "defaultGroups":[
   ],
   "nameIdFormat":"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
-  "groupMembershipAttribute": "Role",
+  "groupMembershipAttribute": "groups",
   "identitySyncType": "default",
   "idpIdentifier": "saml-idp"
 }
