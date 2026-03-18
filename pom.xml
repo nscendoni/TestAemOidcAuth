@@ -597,6 +597,13 @@ Bundle-DocURL:
         <version>1.0.1</version>
         <scope>test</scope>
       </dependency>
+      <!-- Dev tools -->
+      <dependency>
+        <groupId>com.composum.nodes</groupId>
+        <artifactId>composum-nodes-aem-package</artifactId>
+        <version>4.3.5</version>
+        <type>content-package</type>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>

@@ -77,6 +77,11 @@
                             <type>zip</type>
                             <target>/apps/wintergw2025-packages/application/install</target>
                         </embedded>
+                        <embedded>
+                            <groupId>com.composum.nodes</groupId>
+                            <artifactId>composum-nodes-aem-package</artifactId>
+                            <target>/apps/wintergw2025-packages/application/install</target>
+                        </embedded>
                     </embeddeds>
                 </configuration>
             </plugin>
@@ -195,6 +200,12 @@
             <artifactId>aem-wintergw2025-project.ui.config</artifactId>
             <version>${project.version}</version>
             <type>zip</type>
+        </dependency>
+        <dependency>
+            <groupId>com.composum.nodes</groupId>
+            <artifactId>composum-nodes-aem-package</artifactId>
+            <version>4.3.5</version>
+            <type>content-package</type>
         </dependency>
 
     </dependencies>
